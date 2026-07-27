@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "186347374567",
+    "project_id": "bnwems-images",
+    "storage_bucket": "bnwems-images.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:186347374567:android:bb35016fc66563371f9f42",
+        "android_client_info": {
+          "package_name": "com.bnwems.bnwems_staff_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4kSExNEMFhgWUPfDKjA-6UpxNY2_eUhQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
