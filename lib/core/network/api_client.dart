@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../config/app_config.dart';
 import '../errors/api_exception.dart';
 import '../storage/secure_storage_service.dart';
+import 'custom_log_interceptor.dart';
 
 class ApiResult<T> {
   final T data;
@@ -38,6 +39,8 @@ class ApiClient {
   late final Dio _dio;
   final SecureStorageService _storageService;
 
+  Dio get dio => _dio;
+
   ApiClient({
     SecureStorageService? storageService,
     Dio? dio,
@@ -66,6 +69,9 @@ class ApiClient {
         },
       ),
     );
+
+    // Custom Log Interceptor using developer.log
+    _dio.interceptors.add(CustomLogInterceptor());
   }
 
   Future<ApiResult<T>> fetchEnvelope<T>(

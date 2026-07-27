@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'core/services/fcm_service.dart';
 import 'core/theme/app_theme.dart';
+import 'features/authentication/presentation/cubits/auth_cubit.dart';
 import 'features/authentication/presentation/providers/auth_provider.dart';
+import 'features/manager/presentation/cubits/manager_dashboard_cubit.dart';
+import 'features/manager/presentation/providers/manager_change_requests_provider.dart';
+import 'features/manager/presentation/providers/manager_dashboard_provider.dart';
+import 'features/manager/presentation/providers/manager_deposit_provider.dart';
+import 'features/manager/presentation/providers/manager_order_detail_provider.dart';
+import 'features/manager/presentation/providers/manager_order_list_provider.dart';
+import 'features/manager/presentation/providers/manager_pending_provider.dart';
+import 'features/manager/presentation/providers/manager_return_report_detail_provider.dart';
+import 'features/manager/presentation/providers/manager_return_reports_provider.dart';
+import 'features/manager/presentation/providers/manager_schedule_provider.dart';
+import 'features/manager/presentation/providers/manager_settlement_provider.dart';
 import 'features/notifications/presentation/providers/notification_provider.dart';
 import 'features/tasks/presentation/providers/task_provider.dart';
-import 'features/manager/presentation/providers/manager_dashboard_provider.dart';
-import 'features/manager/presentation/providers/manager_order_list_provider.dart';
-import 'features/manager/presentation/providers/manager_order_detail_provider.dart';
-import 'features/manager/presentation/providers/manager_deposit_provider.dart';
-import 'features/manager/presentation/providers/manager_settlement_provider.dart';
-import 'features/manager/presentation/providers/manager_change_requests_provider.dart';
-import 'features/manager/presentation/providers/manager_pending_provider.dart';
-import 'features/manager/presentation/providers/manager_schedule_provider.dart';
-import 'features/manager/presentation/providers/manager_return_reports_provider.dart';
-import 'features/manager/presentation/providers/manager_return_report_detail_provider.dart';
 import 'routes/app_router.dart';
 
 void main() async {
@@ -30,6 +33,8 @@ class BnwemsStaffApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        BlocProvider(create: (_) => AuthCubit()..checkAuthStatus()),
+        BlocProvider(create: (_) => ManagerDashboardCubit()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => TaskProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
