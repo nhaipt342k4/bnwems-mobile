@@ -109,18 +109,3 @@ lib/
    ```
 
 ---
-
-## 📝 Quy trình làm việc trên Git (Branching Workflow)
-
-* **`main`**: Nhánh chính chứa mã nguồn đã phát triển hoàn chỉnh.
-* **`develop`**: Nhánh phát triển chính. Mọi tính năng mới nên được thực hiện trên nhánh này trước khi merge về `main`.
-
-```bash
-# Chuyển sang nhánh develop
-git checkout develop
-
-# Cập nhật và đẩy code mới
-git add .
-git commit -m "Mô tả thay đổi"
-git push origin develop
-```
