@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -23,12 +21,10 @@ import '../providers/task_provider.dart';
 import '../widgets/check_in_modal_bottom_sheet.dart';
 import '../widgets/collected_report_section.dart';
 import '../widgets/equipment_table.dart';
-import '../widgets/field_payment_section.dart';
 import '../widgets/handover_section.dart';
 import '../widgets/settlement_section.dart';
 import '../widgets/supplier_transaction_section.dart';
 import '../widgets/survey_report_section.dart';
-import '../widgets/warehouse_movement_section.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   final String planId;
@@ -56,11 +52,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
   List<WorkTaskItem> _items = [];
   List<SupplierTransaction> _supplierTransactions = [];
   SurveyReport? _surveyReport;
-  FieldPaymentRecord? _fieldPayment;
   CollectedEquipmentReport? _internalCollectedReport;
   CollectedEquipmentReport? _supplierCollectedReport;
   Settlement? _settlement;
-
+  num _depositCollected = 0;
+  bool _isWarehouseConfirmed = false;
   bool _isLoadingSubData = false;
   bool _isConfirming = false;
   String? _confirmError;
@@ -87,57 +83,88 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
 
     setState(() => _isLoadingSubData = true);
 
-    try {
-      // Picklist
-      _items = await _inventoryService.getPicklist(plan.orderId);
-
-      // Task specific data
-      if (plan.taskCode == 'SETUP') {
-        _supplierTransactions = await _supplierService.listWithItems(plan.orderId);
+    int pendingTasks = 0;
+    void checkFinished() {
+      pendingTasks--;
+      if (pendingTasks <= 0 && mounted) {
+        setState(() => _isLoadingSubData = false);
       }
+    }
 
-      if (plan.taskCode == 'SURVEY') {
-        final surveyRows = await _surveyService.listByPlanId(plan.planId);
+    // 1. Picklist (Equipment items)
+    if (plan.taskCode == 'SETUP' || plan.taskCode == 'COLLECT') {
+      pendingTasks++;
+      _inventoryService.getPicklist(plan.orderId).then((items) {
+        if (mounted) setState(() => _items = items);
+      }).catchError((_) {}).whenComplete(checkFinished);
+    }
+
+    // 2. Supplier Transactions (For SETUP)
+    if (plan.taskCode == 'SETUP') {
+      pendingTasks++;
+      _supplierService.listWithItems(plan.orderId).then((txs) {
+        if (mounted) setState(() => _supplierTransactions = txs);
+      }).catchError((_) {}).whenComplete(checkFinished);
+    }
+
+    // 3. Survey Report (For SURVEY)
+    if (plan.taskCode == 'SURVEY') {
+      pendingTasks++;
+      _surveyService.listByPlanId(plan.planId).then((surveyRows) async {
         if (surveyRows.isNotEmpty) {
           final dto = surveyRows.first;
           String photoUrl = '';
           if (dto['evidenceId'] != null) {
-            final ev = await _evidenceService.getById(dto['evidenceId'].toString());
-            photoUrl = ev.fileUrl;
+            try {
+              final ev = await _evidenceService.getById(dto['evidenceId'].toString());
+              photoUrl = ev.fileUrl;
+            } catch (_) {}
           }
-          _surveyReport = SurveyReport.fromJson(dto, evidencePhotoUrl: photoUrl);
-        }
-
-        final deposits = await _depositService.list(plan.orderId);
-        if (deposits.isNotEmpty) {
-          final dto = deposits.first;
-          String? photoUrl;
-          if (dto['evidenceId'] != null) {
-            final ev = await _evidenceService.getById(dto['evidenceId'].toString());
-            photoUrl = ev.fileUrl;
+          if (mounted) {
+            setState(() => _surveyReport = SurveyReport.fromJson(dto, evidencePhotoUrl: photoUrl));
           }
-          _fieldPayment = FieldPaymentRecord.fromJson(dto, evidencePhotoUrl: photoUrl);
         }
-      }
+      }).catchError((_) {}).whenComplete(checkFinished);
+    }
 
-      if (plan.taskCode == 'COLLECT') {
-        final reports = await _collectedService.listByOrderId(plan.orderId);
-        _internalCollectedReport = reports.cast<CollectedEquipmentReport?>().firstWhere(
-              (r) => r?.reportType == 'INTERNAL',
-              orElse: () => null,
-            );
-        _supplierCollectedReport = reports.cast<CollectedEquipmentReport?>().firstWhere(
-              (r) => r?.reportType == 'SUPPLIER',
-              orElse: () => null,
-            );
+    // 4. Collected Reports (For COLLECT)
+    if (plan.taskCode == 'COLLECT') {
+      pendingTasks++;
+      _collectedService.listByOrderId(plan.orderId).then((reports) {
+        if (mounted) {
+          setState(() {
+            _internalCollectedReport = reports.cast<CollectedEquipmentReport?>().firstWhere(
+                  (r) => r?.reportType == 'INTERNAL',
+                  orElse: () => null,
+                );
+            _supplierCollectedReport = reports.cast<CollectedEquipmentReport?>().firstWhere(
+                  (r) => r?.reportType == 'SUPPLIER',
+                  orElse: () => null,
+                );
+          });
+        }
+      }).catchError((_) {}).whenComplete(checkFinished);
 
-        _settlement = await _settlementService.getByOrderId(plan.orderId);
-      }
-    } catch (_) {
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingSubData = false);
-      }
+      // 5. Settlement (For COLLECT)
+      pendingTasks++;
+      _settlementService.getByOrderId(plan.orderId).then((settlement) {
+        if (mounted) setState(() => _settlement = settlement);
+      }).catchError((_) {}).whenComplete(checkFinished);
+
+      // 6. Deposits (For COLLECT)
+      pendingTasks++;
+      _depositService.list(plan.orderId).then((deposits) {
+        if (mounted) {
+          final sum = deposits
+              .where((d) => d['status'] == 'PAID')
+              .fold(0.0, (acc, d) => acc + (num.tryParse(d['amount']?.toString() ?? '0') ?? 0));
+          setState(() => _depositCollected = sum);
+        }
+      }).catchError((_) {}).whenComplete(checkFinished);
+    }
+
+    if (pendingTasks == 0 && mounted) {
+      setState(() => _isLoadingSubData = false);
     }
   }
 
@@ -158,24 +185,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
     }
   }
 
-  Future<void> _handleUploadProgressPhoto() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
-    if (image == null) return;
 
-    try {
-      final ev = await _evidenceService.upload(File(image.path));
-      if (mounted) {
-        await context.read<TaskProvider>().patchEvidence(widget.planId, ev.evidenceId);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi upload ảnh: $e')),
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -223,7 +233,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
           _buildAssigneesTab(plan),
 
           // Tab 3: Attendance
-          _buildAttendanceTab(plan, myAssignee, user),
+          _buildAttendanceTab(plan, myAssignee, user, context),
         ],
       ),
     );
@@ -305,16 +315,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
               const SizedBox(height: 16),
             ],
 
-            // Progress Evidence photo upload button for SETUP / COLLECT tasks
-            if (plan.taskCode == 'SETUP' || plan.taskCode == 'COLLECT') ...[
-              OutlinedButton.icon(
-                onPressed: _handleUploadProgressPhoto,
-                icon: const Icon(LucideIcons.camera, size: 18),
-                label: const Text('Upload ảnh tiến độ thi công hiện trường'),
-                style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 44)),
-              ),
-              const SizedBox(height: 16),
-            ],
+
 
             if (_isLoadingSubData) ...[
               const AppLoadingIndicator(message: 'Đang tải thông tin chi tiết hạng mục...'),
@@ -322,10 +323,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
               // Task specific sections
               if (plan.taskCode == 'SURVEY') ...[
                 SurveyReportSection(
+                  planId: plan.planId,
                   existingReport: _surveyReport,
                   planStatus: plan.status,
+                  isSubmitted: taskProvider.isSurveySubmitted(plan.planId),
                   onSubmit: (input) async {
-                    final ev = await _evidenceService.upload(input.photoFile);
+                    final primaryEv = await _evidenceService.upload(input.primaryPhoto);
+                    for (final photo in input.photoFiles.skip(1)) {
+                      try {
+                        await _evidenceService.upload(photo);
+                      } catch (_) {}
+                    }
                     await _surveyService.create(
                       CreateSurveyReportBody(
                         orderId: plan.orderId,
@@ -339,37 +347,33 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                         siteConstraints: input.siteConstraints,
                         proposedItems: input.proposedItems,
                         notes: input.notes,
-                        evidenceId: ev.evidenceId,
+                        evidenceId: primaryEv.evidenceId,
                       ),
                     );
-                    await _loadData();
-                  },
-                ),
-                const SizedBox(height: 16),
-                FieldPaymentSection(
-                  existingPayment: _fieldPayment,
-                  onSubmit: (input) async {
-                    String? evId;
-                    if (input.photoFile != null) {
-                      final ev = await _evidenceService.upload(input.photoFile!);
-                      evId = ev.evidenceId;
-                    }
-                    await _depositService.create(
-                      plan.orderId,
-                      CreateDepositBody(
-                        amount: input.amount,
-                        paymentMethod: input.method,
-                        evidenceId: evId,
-                        notes: input.note,
-                      ),
-                    );
+                    taskProvider.markSurveySubmitted(plan.planId);
                     await _loadData();
                   },
                 ),
               ],
 
               if (plan.taskCode == 'SETUP') ...[
-                EquipmentTable(items: _items),
+                EquipmentTable(
+                  items: _items,
+                  isWarehouseConfirmed: _isWarehouseConfirmed || taskProvider.isWarehouseConfirmed(plan.planId) || plan.status == 'COMPLETED',
+                  onConfirmWarehouseMovement: (notes) async {
+                    final movementItems = _items
+                        .where((i) => i.source == null || i.source == 'INTERNAL')
+                        .map((i) => {'itemId': i.itemId, 'quantity': i.quantity})
+                        .toList();
+                    await taskProvider.warehouseMovement(plan.planId, movementItems, notes: notes);
+                    if (mounted) {
+                      setState(() {
+                        _isWarehouseConfirmed = true;
+                      });
+                    }
+                    await _loadData();
+                  },
+                ),
                 const SizedBox(height: 16),
                 SupplierTransactionSection(
                   transactions: _supplierTransactions,
@@ -378,19 +382,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     await _loadData();
                   },
                 ),
-                const SizedBox(height: 16),
-                WarehouseMovementSection(
-                  items: _items,
-                  onSubmit: (input) async {
-                    await taskProvider.warehouseMovement(plan.planId, input.items, notes: input.notes);
-                    await _loadData();
-                  },
-                ),
+
+
                 const SizedBox(height: 16),
                 HandoverSection(
-                  onSubmit: (note, photoFile) async {
-                    final ev = await _evidenceService.upload(photoFile);
-                    await taskProvider.patchEvidence(plan.planId, ev.evidenceId);
+                  onSubmit: (note, photoFiles) async {
+                    for (final photo in photoFiles) {
+                      try {
+                        final ev = await _evidenceService.upload(photo);
+                        await taskProvider.patchEvidence(plan.planId, ev.evidenceId);
+                      } catch (_) {}
+                    }
                     await _loadData();
                   },
                 ),
@@ -419,6 +421,34 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                 const SizedBox(height: 16),
                 SettlementSection(
                   existingSettlement: _settlement,
+                  orderCode: plan.orderCode,
+                  eventName: plan.eventName,
+                  customerName: plan.customerName,
+                  eventDate: plan.startTime,
+                  depositCollected: _depositCollected,
+                  onSubmitSettlement: (input) async {
+                    String? evId;
+                    if (input.photoFile != null) {
+                      final ev = await _evidenceService.upload(input.photoFile!);
+                      evId = ev.evidenceId;
+                    }
+                    final settlementId = await _settlementService.create(
+                      plan.orderId,
+                      CreateSettlementBody(
+                        additionalFee: input.additionalFee,
+                        compensation: input.compensation,
+                        discount: input.discount,
+                        paymentMethod: input.paymentMethod,
+                        notes: input.notes,
+                      ),
+                    );
+                    if (evId != null && settlementId.isNotEmpty) {
+                      try {
+                        await _settlementService.markPaid(settlementId, evId);
+                      } catch (_) {}
+                    }
+                    await _loadData();
+                  },
                   onMarkPaid: (photoFile) async {
                     if (_settlement != null) {
                       final ev = await _evidenceService.upload(photoFile);
@@ -491,9 +521,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildAttendanceTab(SchedulePlan plan, SchedulePlanAssignee? myAssignee, AuthUser? user) {
+  Widget _buildAttendanceTab(SchedulePlan plan, SchedulePlanAssignee? myAssignee, AuthUser? user, BuildContext context) {
     final isCheckedIn = myAssignee?.isCheckedIn ?? false;
     final isCheckedOut = myAssignee?.isCheckedOut ?? false;
+    final activePlan = user != null ? context.watch<TaskProvider>().getActiveCheckedInPlan(user.id) : null;
+    final hasOtherActivePlan = activePlan != null && activePlan.planId != plan.planId;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -522,10 +554,45 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
           const SizedBox(height: 20),
 
           if (!isCheckedIn && user != null) ...[
+            if (hasOtherActivePlan) ...[
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.alertTriangle, size: 20, color: Colors.amber.shade900),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Bạn không được check-in khi chưa hoàn thành (check-out) công việc "${activePlan.taskName}" (${activePlan.planCode}).',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             AppButton(
-              text: 'Điểm danh Check-in hiện trường',
+              text: hasOtherActivePlan ? 'Nút Check-in đã bị khóa' : 'Điểm danh Check-in hiện trường',
               isFullWidth: true,
+              variant: hasOtherActivePlan ? AppButtonVariant.secondary : AppButtonVariant.primary,
               onPressed: () {
+                if (hasOtherActivePlan) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Bạn không được check-in khi chưa hoàn thành công việc "${activePlan.taskName}" (${activePlan.planCode}).'),
+                      backgroundColor: Colors.red.shade700,
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
+                  return;
+                }
                 CheckInModalBottomSheet.show(
                   context,
                   taskName: plan.taskName,

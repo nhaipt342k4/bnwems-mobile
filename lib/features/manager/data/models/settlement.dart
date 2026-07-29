@@ -6,6 +6,7 @@ class Settlement {
   final double discount;
   final double finalAmount;
   final String? paymentMethod;
+  final String? paidAt;
   final String status; // 'UNPAID' | 'PAID' | 'CANCELLED'
   final String? notes;
   final String createdAt;
@@ -24,6 +25,7 @@ class Settlement {
     required this.discount,
     required this.finalAmount,
     this.paymentMethod,
+    this.paidAt,
     required this.status,
     this.notes,
     required this.createdAt,
@@ -42,6 +44,7 @@ class Settlement {
       discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
       finalAmount: (json['finalAmount'] as num?)?.toDouble() ?? 0.0,
       paymentMethod: json['paymentMethod']?.toString(),
+      paidAt: json['paidAt']?.toString(),
       status: json['status']?.toString() ?? 'UNPAID',
       notes: json['notes']?.toString(),
       createdAt: json['createdAt']?.toString() ?? '',
@@ -65,6 +68,7 @@ class Settlement {
       discount: discount,
       finalAmount: finalAmount,
       paymentMethod: paymentMethod,
+      paidAt: paidAt,
       status: status,
       notes: notes,
       createdAt: createdAt,

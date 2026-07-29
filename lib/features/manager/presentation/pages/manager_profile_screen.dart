@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -146,6 +147,62 @@ class _ManagerProfileScreenState extends State<ManagerProfileScreen> {
                         ),
                       ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Account Actions Card
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderLight),
+              ),
+              child: Column(
+                children: [
+                  InkWell(
+                    onTap: () => context.push('/manager/profile/edit'),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(LucideIcons.userCheck, color: AppColors.primary, size: 20),
+                              SizedBox(width: 12),
+                              Text('Cập nhật hồ sơ cá nhân', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                            ],
+                          ),
+                          Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  InkWell(
+                    onTap: () => context.push('/manager/profile/change-password'),
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                    child: const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(LucideIcons.keyRound, color: Colors.orange, size: 20),
+                              SizedBox(width: 12),
+                              Text('Đổi mật khẩu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                            ],
+                          ),
+                          Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),

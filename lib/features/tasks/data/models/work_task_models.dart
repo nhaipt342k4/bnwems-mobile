@@ -233,10 +233,17 @@ class FieldPaymentRecord {
   });
 
   factory FieldPaymentRecord.fromJson(Map<String, dynamic> json, {String? evidencePhotoUrl}) {
+    num parseNum(dynamic val) {
+      if (val == null) return 0;
+      if (val is num) return val;
+      if (val is String) return num.tryParse(val) ?? 0;
+      return 0;
+    }
+
     return FieldPaymentRecord(
       submittedAt: json['createdAt']?.toString() ?? '',
       method: json['paymentMethod']?.toString() ?? 'cash',
-      amount: (json['amount'] as num?) ?? 0,
+      amount: parseNum(json['amount']),
       note: json['notes']?.toString(),
       evidencePhotoUrl: evidencePhotoUrl,
     );
@@ -349,12 +356,19 @@ class Settlement {
   });
 
   factory Settlement.fromJson(Map<String, dynamic> json, {String? evidencePhotoUrl}) {
+    num parseNum(dynamic val) {
+      if (val == null) return 0;
+      if (val is num) return val;
+      if (val is String) return num.tryParse(val) ?? 0;
+      return 0;
+    }
+
     return Settlement(
       settlementId: json['settlementId']?.toString() ?? '',
-      additionalFee: (json['additionalFee'] as num?) ?? 0,
-      compensation: (json['compensation'] as num?) ?? 0,
-      discount: (json['discount'] as num?) ?? 0,
-      finalAmount: (json['finalAmount'] as num?) ?? 0,
+      additionalFee: parseNum(json['additionalFee']),
+      compensation: parseNum(json['compensation']),
+      discount: parseNum(json['discount']),
+      finalAmount: parseNum(json['finalAmount']),
       paymentMethod: json['paymentMethod']?.toString(),
       qrCodeUrl: json['qrCodeUrl']?.toString(),
       paidAt: json['paidAt']?.toString(),

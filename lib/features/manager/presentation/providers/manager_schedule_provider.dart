@@ -79,14 +79,7 @@ class ManagerScheduleProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final dateFrom = Formatters.toIsoDateOnly(_weekStart);
-      final dateTo = Formatters.toIsoDateOnly(_weekStart.add(const Duration(days: 6)));
-
-      _plans = await _service.getSchedulePlans(
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        dateMode: 'plan',
-      );
+      _plans = await _service.getSchedulePlans(limit: 500);
       _isLoading = false;
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');

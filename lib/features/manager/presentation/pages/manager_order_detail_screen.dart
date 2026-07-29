@@ -190,18 +190,6 @@ class _ManagerOrderDetailScreenState extends State<ManagerOrderDetailScreen> {
                                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
                                           ),
                                         ),
-                                        const SizedBox(width: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green.shade50,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            Formatters.formatPaymentStatus(order.paymentStatus),
-                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade800),
-                                          ),
-                                        ),
                                       ],
                                     ),
                                   ],

@@ -106,54 +106,12 @@ class _ManagerOrderListScreenState extends State<ManagerOrderListScreen> {
                   child: Row(
                     children: [
                       _buildQuickFilterChip(provider, QuickFilter.all, 'Tất cả'),
-                      _buildQuickFilterChip(provider, QuickFilter.today, 'Hôm nay'),
+                      _buildQuickFilterChip(provider, QuickFilter.confirmed, 'Đã xác nhận'),
                       _buildQuickFilterChip(provider, QuickFilter.upcoming, 'Sắp diễn ra'),
                       _buildQuickFilterChip(provider, QuickFilter.inProgress, 'Đang thực hiện'),
                       _buildQuickFilterChip(provider, QuickFilter.completed, 'Hoàn thành'),
                     ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: provider.orderStatus,
-                        decoration: InputDecoration(
-                          hintText: 'Trạng thái đơn',
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: '', child: Text('Tất cả đơn')),
-                          DropdownMenuItem(value: 'NEW', child: Text('Đơn mới')),
-                          DropdownMenuItem(value: 'CONFIRMED', child: Text('Đã xác nhận')),
-                          DropdownMenuItem(value: 'IN_PROGRESS', child: Text('Đang thực hiện')),
-                          DropdownMenuItem(value: 'COMPLETED', child: Text('Hoàn thành')),
-                          DropdownMenuItem(value: 'CANCELLED', child: Text('Đã hủy')),
-                        ],
-                        onChanged: (val) => provider.setOrderStatus(val ?? ''),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: provider.paymentStatus,
-                        decoration: InputDecoration(
-                          hintText: 'Thanh toán',
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: '', child: Text('Tất cả thanh toán')),
-                          DropdownMenuItem(value: 'UNPAID', child: Text('Chưa thanh toán')),
-                          DropdownMenuItem(value: 'DEPOSITED', child: Text('Đã đặt cọc')),
-                          DropdownMenuItem(value: 'PAID', child: Text('Đã thanh toán')),
-                        ],
-                        onChanged: (val) => provider.setPaymentStatus(val ?? ''),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -161,19 +119,28 @@ class _ManagerOrderListScreenState extends State<ManagerOrderListScreen> {
 
           // Order List Content
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => provider.fetchOrders(),
-              child: provider.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : provider.errorMessage != null
-                      ? Center(
-                          child: Text(provider.errorMessage!, style: TextStyle(color: Colors.red.shade700)),
-                        )
-                      : provider.filteredOrders.isEmpty
-                          ? const Center(
-                              child: Text('Không tìm thấy đơn hàng nào.', style: TextStyle(color: AppColors.textMuted)),
-                            )
-                          : ListView.builder(
+            child: provider.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : provider.errorMessage != null
+                    ? Center(
+                        child: Text(provider.errorMessage!, style: TextStyle(color: Colors.red.shade700)),
+                      )
+                    : provider.filteredOrders.isEmpty
+                        ? RefreshIndicator(
+                            onRefresh: () => provider.fetchOrders(),
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: Container(
+                                height: 300,
+                                alignment: Alignment.center,
+                                child: const Text('Không tìm thấy đơn hàng nào.', style: TextStyle(color: AppColors.textMuted)),
+                              ),
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: () => provider.fetchOrders(),
+                            child: ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
                               padding: const EdgeInsets.all(16),
                               itemCount: provider.filteredOrders.length,
                               itemBuilder: (context, index) {
@@ -195,32 +162,16 @@ class _ManagerOrderListScreenState extends State<ManagerOrderListScreen> {
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(order.orderCode, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
-                                            Row(
-                                              children: [
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                                  decoration: BoxDecoration(
-                                                    color: _getStatusBgColor(order.orderStatus),
-                                                    borderRadius: BorderRadius.circular(8),
-                                                  ),
-                                                  child: Text(
-                                                    Formatters.formatStatus(order.orderStatus),
-                                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _getStatusTextColor(order.orderStatus)),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                                  decoration: BoxDecoration(
-                                                    color: _getStatusBgColor(order.paymentStatus),
-                                                    borderRadius: BorderRadius.circular(8),
-                                                  ),
-                                                  child: Text(
-                                                    Formatters.formatPaymentStatus(order.paymentStatus),
-                                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _getStatusTextColor(order.paymentStatus)),
-                                                  ),
-                                                ),
-                                              ],
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: _getStatusBgColor(order.orderStatus),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                Formatters.formatStatus(order.orderStatus),
+                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _getStatusTextColor(order.orderStatus)),
+                                              ),
                                             ),
                                           ],
                                         ),

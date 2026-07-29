@@ -20,24 +20,15 @@ class ManagerDashboardCubit extends Cubit<ManagerDashboardState> {
         super(ManagerDashboardInitial());
 
   Future<void> fetchDashboardData() async {
-    emit(ManagerDashboardLoading());
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
-    try {
-      final now = DateTime.now();
-      final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    List<dynamic> upcomingOrders = [];
+    List<dynamic> todaySchedule = [];
+    PendingSummary pendingSummary = PendingSummary.empty();
+    List<dynamic> allOrdersData = [];
 
-      final results = await Future.wait([
-        _orderService.getOrders(limit: 5, orderStatus: 'IN_PROGRESS'),
-        _scheduleService.getSchedulePlans(date: todayStr),
-        _pendingService.getPendingSummary(),
-        _orderService.getOrders(limit: 100),
-      ]);
-
-      final upcomingOrders = (results[0] as Map<String, dynamic>)['orders'] as List<dynamic>? ?? [];
-      final todaySchedule = (results[1] as List<dynamic>?) ?? [];
-      final pendingSummary = results[2] as PendingSummary;
-      final allOrdersData = (results[3] as Map<String, dynamic>)['orders'] as List<dynamic>? ?? [];
-
+    void emitCurrent() {
       final stats = {
         'upcomingOrdersCount': upcomingOrders.length,
         'todayTasksCount': todaySchedule.length,
@@ -51,8 +42,30 @@ class ManagerDashboardCubit extends Cubit<ManagerDashboardState> {
         upcomingOrders: upcomingOrders,
         pendingSummary: pendingSummary,
       ));
-    } catch (e) {
-      emit(ManagerDashboardError(e.toString()));
     }
+
+    // 1. Pending Summary (Fastest)
+    _pendingService.getPendingSummary().then((summary) {
+      pendingSummary = summary;
+      emitCurrent();
+    }).catchError((_) {});
+
+    // 2. Today Schedule
+    _scheduleService.getSchedulePlans(date: todayStr).then((schedule) {
+      todaySchedule = schedule;
+      emitCurrent();
+    }).catchError((_) {});
+
+    // 3. Upcoming Orders
+    _orderService.getOrders(limit: 5, orderStatus: 'IN_PROGRESS').then((orders) {
+      upcomingOrders = orders;
+      emitCurrent();
+    }).catchError((_) {});
+
+    // 4. All Orders (For stats)
+    _orderService.getOrders(limit: 100).then((orders) {
+      allOrdersData = orders;
+      emitCurrent();
+    }).catchError((_) {});
   }
 }

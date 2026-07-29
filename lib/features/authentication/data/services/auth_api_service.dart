@@ -55,14 +55,23 @@ class AuthApiService {
     return AuthUser.fromDtoJson(response);
   }
 
-  Future<void> changePassword(String oldPassword, String newPassword) async {
+  Future<void> changePassword(String oldPassword, String newPassword, String confirmNewPassword) async {
     await _apiClient.fetchData(
       '/auth/change-password',
       method: 'PUT',
       body: {
         'oldPassword': oldPassword,
         'newPassword': newPassword,
+        'confirmNewPassword': confirmNewPassword,
       },
+    );
+  }
+
+  Future<void> forgotPassword(String username) async {
+    await _apiClient.fetchData(
+      '/auth/forgot-password',
+      method: 'POST',
+      body: {'username': username},
     );
   }
 }

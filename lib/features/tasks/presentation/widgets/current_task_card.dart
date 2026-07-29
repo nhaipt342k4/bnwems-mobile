@@ -10,12 +10,14 @@ import '../../data/models/work_task_models.dart';
 class CurrentTaskCard extends StatelessWidget {
   final SchedulePlan plan;
   final SchedulePlanAssignee? myAssignee;
+  final SchedulePlan? activePlan;
   final VoidCallback? onCheckInPressed;
 
   const CurrentTaskCard({
     super.key,
     required this.plan,
     this.myAssignee,
+    this.activePlan,
     this.onCheckInPressed,
   });
 
@@ -85,6 +87,7 @@ class CurrentTaskCard extends StatelessWidget {
     final typeColors = _getTypeColors(plan.taskCode);
     final isCheckedIn = myAssignee?.isCheckedIn ?? false;
     final canCheckIn = plan.status != 'CANCELLED' && plan.status != 'COMPLETED' && !isCheckedIn;
+    final hasOtherActivePlan = activePlan != null && activePlan!.planId != plan.planId;
 
     return Container(
       decoration: BoxDecoration(
@@ -195,6 +198,30 @@ class CurrentTaskCard extends StatelessWidget {
           if (myAssignee != null) AppRoleBadge(roleName: myAssignee!.role),
           const SizedBox(height: 12),
 
+          if (canCheckIn && hasOtherActivePlan) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.alertTriangle, size: 16, color: Colors.amber.shade900),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Bạn không được check-in khi chưa hoàn thành (check-out) công việc ${activePlan!.planCode} (${activePlan!.taskName}).',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           // Row 6: Action buttons
           Row(
             children: [
@@ -202,11 +229,11 @@ class CurrentTaskCard extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: onCheckInPressed,
-                    icon: const Icon(LucideIcons.checkCircle2, size: 16),
-                    label: const Text('Check-in'),
+                    icon: Icon(hasOtherActivePlan ? LucideIcons.lock : LucideIcons.checkCircle2, size: 16),
+                    label: Text(hasOtherActivePlan ? 'Đã bị khóa' : 'Check-in'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                      backgroundColor: hasOtherActivePlan ? Colors.grey.shade300 : AppColors.primary,
+                      foregroundColor: hasOtherActivePlan ? Colors.grey.shade700 : Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),

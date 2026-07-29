@@ -3,7 +3,7 @@ import '../../data/models/manager_order.dart';
 import '../../data/services/manager_order_service.dart';
 import '../../../../core/utils/formatters.dart';
 
-enum QuickFilter { all, today, upcoming, inProgress, completed }
+enum QuickFilter { all, confirmed, upcoming, inProgress, completed }
 
 class ManagerOrderListProvider extends ChangeNotifier {
   final ManagerOrderService _orderService;
@@ -28,11 +28,12 @@ class ManagerOrderListProvider extends ChangeNotifier {
       : _orderService = orderService ?? ManagerOrderService();
 
   List<ManagerOrder> get filteredOrders {
+    if (_orders.isEmpty) return [];
     final todayIso = Formatters.toIsoDateOnly(DateTime.now());
 
     switch (_quickFilter) {
-      case QuickFilter.today:
-        return _orders.where((o) => o.eventDate.startsWith(todayIso)).toList();
+      case QuickFilter.confirmed:
+        return _orders.where((o) => o.orderStatus == 'CONFIRMED').toList();
       case QuickFilter.upcoming:
         return _orders
             .where((o) => o.eventDate.compareTo(todayIso) > 0 && o.orderStatus != 'CANCELLED')

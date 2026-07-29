@@ -7,6 +7,7 @@ import '../../../tasks/data/models/work_task_models.dart';
 class QuickAttendanceCard extends StatelessWidget {
   final SchedulePlan? plan;
   final SchedulePlanAssignee? myAssignee;
+  final SchedulePlan? activePlan;
   final VoidCallback? onCheckInPressed;
   final VoidCallback? onCheckOutPressed;
 
@@ -14,6 +15,7 @@ class QuickAttendanceCard extends StatelessWidget {
     super.key,
     this.plan,
     this.myAssignee,
+    this.activePlan,
     this.onCheckInPressed,
     this.onCheckOutPressed,
   });
@@ -46,6 +48,8 @@ class QuickAttendanceCard extends StatelessWidget {
 
     final isCheckedIn = myAssignee!.isCheckedIn;
     final isCheckedOut = myAssignee!.isCheckedOut;
+
+    final hasOtherActivePlan = activePlan != null && plan != null && activePlan!.planId != plan!.planId;
 
     return Container(
       width: double.infinity,
@@ -111,15 +115,38 @@ class QuickAttendanceCard extends StatelessWidget {
           const SizedBox(height: 14),
 
           if (!isCheckedIn) ...[
+            if (hasOtherActivePlan) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.amber.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.alertTriangle, size: 16, color: Colors.amber.shade900),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Bạn không được check-in khi chưa hoàn thành (check-out) công việc ${activePlan!.planCode} (${activePlan!.taskName}).',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: onCheckInPressed,
-                icon: const Icon(LucideIcons.checkCircle2, size: 18),
-                label: const Text('Check-in Ngay'),
+                icon: Icon(hasOtherActivePlan ? LucideIcons.lock : LucideIcons.checkCircle2, size: 18),
+                label: Text(hasOtherActivePlan ? 'Nút Check-in đã bị khóa' : 'Check-in Ngay'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: hasOtherActivePlan ? Colors.grey.shade300 : AppColors.primary,
+                  foregroundColor: hasOtherActivePlan ? Colors.grey.shade700 : Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

@@ -135,7 +135,7 @@ class _VietQrWidgetState extends State<VietQrWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.amount <= 0) return const SizedBox.shrink();
+    if (widget.amount < 0) return const SizedBox.shrink();
 
     final qrUrl = _buildQrUrl();
 

@@ -163,6 +163,7 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
                   height: 140,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
                 ),
               ),
             ],

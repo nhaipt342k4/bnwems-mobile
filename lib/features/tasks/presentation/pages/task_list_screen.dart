@@ -129,25 +129,40 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 ),
               ] else ...[
                 ...filteredPlans.map(
-                  (plan) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: CurrentTaskCard(
-                      plan: plan,
-                      myAssignee: user != null ? taskProvider.getMyAssignee(plan, user.id) : null,
-                      onCheckInPressed: () {
-                        if (user != null) {
-                          CheckInModalBottomSheet.show(
-                            context,
-                            taskName: plan.taskName,
-                            locationName: plan.location,
-                            onConfirmCheckIn: (photoFile) async {
-                              await taskProvider.checkIn(plan.planId, user.id);
-                            },
-                          );
-                        }
-                      },
-                    ),
-                  ),
+                  (plan) {
+                    final activePlan = user != null ? taskProvider.getActiveCheckedInPlan(user.id) : null;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: CurrentTaskCard(
+                        plan: plan,
+                        myAssignee: user != null ? taskProvider.getMyAssignee(plan, user.id) : null,
+                        activePlan: activePlan,
+                        onCheckInPressed: () {
+                          if (user != null) {
+                            final activePlan = taskProvider.getActiveCheckedInPlan(user.id);
+                            if (activePlan != null && activePlan.planId != plan.planId) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Bạn đang thực hiện công việc "${activePlan.taskName}" (${activePlan.planCode}) chưa check-out. Vui lòng check-out trước khi check-in công việc mới.'),
+                                  backgroundColor: Colors.red.shade700,
+                                  duration: const Duration(seconds: 4),
+                                ),
+                              );
+                              return;
+                            }
+                            CheckInModalBottomSheet.show(
+                              context,
+                              taskName: plan.taskName,
+                              locationName: plan.location,
+                              onConfirmCheckIn: (photoFile) async {
+                                await taskProvider.checkIn(plan.planId, user.id);
+                              },
+                            );
+                          }
+                        },
+                      ),
+                    );
+                  },
                 ),
               ],
             ],

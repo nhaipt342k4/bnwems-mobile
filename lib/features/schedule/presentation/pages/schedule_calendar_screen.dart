@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../../core/widgets/app_badge.dart';
 import '../../../../core/widgets/empty_state_widget.dart';
+import '../../../authentication/presentation/providers/auth_provider.dart';
 import '../../../tasks/presentation/providers/task_provider.dart';
+import '../../../tasks/presentation/widgets/check_in_modal_bottom_sheet.dart';
+import '../../../tasks/presentation/widgets/current_task_card.dart';
 
 class ScheduleCalendarScreen extends StatefulWidget {
   const ScheduleCalendarScreen({super.key});
@@ -61,17 +62,28 @@ class _ScheduleCalendarScreenState extends State<ScheduleCalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
     final taskProvider = context.watch<TaskProvider>();
     final selectedDateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
     final monthYearStr = 'Tháng ${DateFormat('M, yyyy').format(_selectedDate)}';
 
-    final datesWithPlans = taskProvider.myPlans
-        .map((p) => p.startTime.split('T').first)
-        .toSet();
+    final datesWithPlans = taskProvider.myPlans.map((p) {
+      try {
+        final localDate = DateTime.parse(p.startTime).toLocal();
+        return Formatters.toIsoDateOnly(localDate);
+      } catch (_) {
+        return p.startTime.split('T').first;
+      }
+    }).toSet();
 
-    final dayPlans = taskProvider.myPlans
-        .where((p) => p.startTime.startsWith(selectedDateStr))
-        .toList()
+    final dayPlans = taskProvider.myPlans.where((p) {
+      try {
+        final localDate = DateTime.parse(p.startTime).toLocal();
+        return Formatters.toIsoDateOnly(localDate) == selectedDateStr;
+      } catch (_) {
+        return p.startTime.startsWith(selectedDateStr);
+      }
+    }).toList()
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
     final weekdayLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
@@ -211,64 +223,41 @@ class _ScheduleCalendarScreenState extends State<ScheduleCalendarScreen> {
                     ),
                   ] else ...[
                     ...dayPlans.map(
-                      (plan) => InkWell(
-                        onTap: () => context.push('/staff/tasks/${plan.planId}'),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.borderLight),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    Formatters.formatTime(plan.startTime),
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
-                                  ),
-                                  AppBadge(
-                                    label: Formatters.formatStatus(plan.status),
-                                    backgroundColor: AppColors.primaryLight,
-                                    textColor: AppColors.primaryDark,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                plan.taskName,
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${plan.orderCode} · ${plan.customerName}',
-                                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                              ),
-                              if (plan.location != null) ...[
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    const Icon(LucideIcons.mapPin, size: 12, color: AppColors.textMuted),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        plan.location!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
-                                      ),
+                      (plan) {
+                        final myAssignee = user != null ? taskProvider.getMyAssignee(plan, user.id) : null;
+                        final activePlan = user != null ? taskProvider.getActiveCheckedInPlan(user.id) : null;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: CurrentTaskCard(
+                            plan: plan,
+                            myAssignee: myAssignee,
+                            activePlan: activePlan,
+                            onCheckInPressed: () {
+                              if (user != null) {
+                                final activePlan = taskProvider.getActiveCheckedInPlan(user.id);
+                                if (activePlan != null && activePlan.planId != plan.planId) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Bạn đang thực hiện công việc "${activePlan.taskName}" (${activePlan.planCode}) chưa check-out. Vui lòng check-out trước khi check-in công việc mới.'),
+                                      backgroundColor: Colors.red.shade700,
+                                      duration: const Duration(seconds: 4),
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ],
+                                  );
+                                  return;
+                                }
+                                CheckInModalBottomSheet.show(
+                                  context,
+                                  taskName: plan.taskName,
+                                  locationName: plan.location,
+                                  onConfirmCheckIn: (photoFile) async {
+                                    await taskProvider.checkIn(plan.planId, user.id);
+                                  },
+                                );
+                              }
+                            },
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ],
                 ],

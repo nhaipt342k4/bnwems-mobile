@@ -16,10 +16,9 @@ class MainLayout extends StatelessWidget {
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith('/staff/dashboard')) return 0;
-    if (location.startsWith('/staff/tasks')) return 1;
-    if (location.startsWith('/staff/schedule') || location.startsWith('/staff/attendance')) return 2;
-    if (location.startsWith('/staff/notifications')) return 3;
-    if (location.startsWith('/staff/profile') || location.startsWith('/staff/team')) return 4;
+    if (location.startsWith('/staff/schedule') || location.startsWith('/staff/attendance') || location.startsWith('/staff/tasks')) return 1;
+    if (location.startsWith('/staff/notifications')) return 2;
+    if (location.startsWith('/staff/profile') || location.startsWith('/staff/team')) return 3;
     return 0;
   }
 
@@ -29,15 +28,12 @@ class MainLayout extends StatelessWidget {
         context.go('/staff/dashboard');
         break;
       case 1:
-        context.go('/staff/tasks');
-        break;
-      case 2:
         context.go('/staff/schedule');
         break;
-      case 3:
+      case 2:
         context.go('/staff/notifications');
         break;
-      case 4:
+      case 3:
         context.go('/staff/profile');
         break;
     }
@@ -65,10 +61,6 @@ class MainLayout extends StatelessWidget {
             const BottomNavigationBarItem(
               icon: Icon(LucideIcons.home),
               label: 'Trang chủ',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(LucideIcons.calendarCheck),
-              label: 'Nhiệm vụ',
             ),
             const BottomNavigationBarItem(
               icon: Icon(LucideIcons.clock),

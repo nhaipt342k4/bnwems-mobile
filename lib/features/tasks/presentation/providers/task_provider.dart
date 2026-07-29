@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/work_task_models.dart';
 import '../../data/services/schedule_plan_api_service.dart';
 
@@ -6,19 +7,65 @@ class TaskProvider extends ChangeNotifier {
   final SchedulePlanApiService _planApiService;
 
   List<SchedulePlan> _myPlans = [];
+  final Set<String> _confirmedWarehousePlanIds = {};
+  final Set<String> _submittedSurveyPlanIds = {};
   bool _isLoading = false;
   String? _errorMessage;
   String _selectedStatusFilter = 'ALL';
   String _searchQuery = '';
 
   List<SchedulePlan> get myPlans => _myPlans;
+  Set<String> get confirmedWarehousePlanIds => _confirmedWarehousePlanIds;
+  Set<String> get submittedSurveyPlanIds => _submittedSurveyPlanIds;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String get selectedStatusFilter => _selectedStatusFilter;
   String get searchQuery => _searchQuery;
 
   TaskProvider({SchedulePlanApiService? planApiService})
-      : _planApiService = planApiService ?? SchedulePlanApiService();
+      : _planApiService = planApiService ?? SchedulePlanApiService() {
+    _loadConfirmedWarehouseState();
+  }
+
+  Future<void> _loadConfirmedWarehouseState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final whList = prefs.getStringList('confirmed_wh_plans') ?? [];
+      _confirmedWarehousePlanIds.addAll(whList);
+
+      final surveyList = prefs.getStringList('submitted_survey_plans') ?? [];
+      _submittedSurveyPlanIds.addAll(surveyList);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> _saveConfirmedWarehouseState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('confirmed_wh_plans', _confirmedWarehousePlanIds.toList());
+    } catch (_) {}
+  }
+
+  Future<void> _saveSubmittedSurveyState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('submitted_survey_plans', _submittedSurveyPlanIds.toList());
+    } catch (_) {}
+  }
+
+  bool isWarehouseConfirmed(String planId) {
+    return _confirmedWarehousePlanIds.contains(planId);
+  }
+
+  bool isSurveySubmitted(String planId) {
+    return _submittedSurveyPlanIds.contains(planId);
+  }
+
+  void markSurveySubmitted(String planId) {
+    _submittedSurveyPlanIds.add(planId);
+    _saveSubmittedSurveyState();
+    notifyListeners();
+  }
 
   List<SchedulePlan> getFilteredPlans() {
     return _myPlans.where((plan) {
@@ -59,6 +106,18 @@ class TaskProvider extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  SchedulePlan? getActiveCheckedInPlan([String? userId]) {
+    for (final plan in _myPlans) {
+      for (final assignee in plan.assignees) {
+        final matchesUser = userId == null || userId.isEmpty || assignee.userId == userId;
+        if (matchesUser && assignee.isCheckedIn && !assignee.isCheckedOut) {
+          return plan;
+        }
+      }
+    }
+    return null;
   }
 
   Future<void> loadMyPlans({String? currentUserId}) async {
@@ -111,6 +170,12 @@ class TaskProvider extends ChangeNotifier {
   }
 
   Future<void> checkIn(String planId, String userId, {String? checkInEvidenceId}) async {
+    final activePlan = getActiveCheckedInPlan(userId);
+    if (activePlan != null && activePlan.planId != planId) {
+      throw Exception(
+        'Bạn đang thực hiện công việc "${activePlan.taskName}" (${activePlan.planCode}) chưa check-out. Vui lòng check-out trước khi check-in công việc mới.',
+      );
+    }
     final updated = await _planApiService.checkIn(
       planId,
       userId,
@@ -147,6 +212,9 @@ class TaskProvider extends ChangeNotifier {
     String? notes,
   }) async {
     await _planApiService.warehouseMovement(planId, items, notes: notes);
+    _confirmedWarehousePlanIds.add(planId);
+    await _saveConfirmedWarehouseState();
+    notifyListeners();
     await refreshPlan(planId);
   }
 }

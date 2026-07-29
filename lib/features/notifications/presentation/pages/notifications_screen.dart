@@ -10,6 +10,7 @@ import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../../../core/widgets/empty_state_widget.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
+import '../../../tasks/data/models/work_task_models.dart';
 import '../../../tasks/presentation/providers/task_provider.dart';
 import '../providers/notification_provider.dart';
 
@@ -23,13 +24,16 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final FcmService _fcmService = FcmService();
   String? _confirmingPlanId;
+  String _selectedFilter = 'ALL'; // 'ALL' | 'UNREAD' | 'READ'
 
   @override
   void initState() {
     super.initState();
     _fcmService.initialize();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().user;
       context.read<NotificationProvider>().loadNotifications();
+      context.read<TaskProvider>().loadMyPlans(currentUserId: user?.id);
     });
   }
 
@@ -47,37 +51,123 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         .toList()
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
+    final planNotifications = taskProvider.myPlans.map((plan) {
+      final notifId = 'plan_${plan.planId}';
+      final defaultIsRead = plan.status == 'COMPLETED' || plan.status == 'CANCELLED';
+      final isRead = notifProvider.isRead(notifId, defaultIsRead);
+      return UserNotification(
+        notificationId: notifId,
+        userId: user?.id ?? '',
+        title: 'Phân công công việc',
+        content: 'Bạn được phân công phụ trách ${plan.taskName} (${plan.orderCode}${plan.eventName != null && plan.eventName!.isNotEmpty ? ' · ${plan.eventName}' : ''}).',
+        type: 'ASSIGNMENT',
+        isRead: isRead,
+        createdAt: plan.startTime,
+      );
+    }).toList();
+
+    final apiNotifIds = notifProvider.notifications.map((n) => n.notificationId).toSet();
+    final rawCombined = [
+      ...notifProvider.notifications,
+      ...planNotifications.where((p) => !apiNotifIds.contains(p.notificationId)),
+    ];
+
+    final combinedNotifications = rawCombined.map((n) {
+      final isRead = notifProvider.isRead(n.notificationId, n.isRead);
+      return UserNotification(
+        notificationId: n.notificationId,
+        userId: n.userId,
+        title: n.title,
+        content: n.content,
+        type: n.type,
+        isRead: isRead,
+        createdAt: n.createdAt,
+      );
+    }).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    final unreadCount = combinedNotifications.where((n) => !n.isRead).length;
+    final readCount = combinedNotifications.where((n) => n.isRead).length;
+
+    List<UserNotification> filteredNotifications;
+    if (_selectedFilter == 'UNREAD') {
+      filteredNotifications = combinedNotifications.where((n) => !n.isRead).toList();
+    } else if (_selectedFilter == 'READ') {
+      filteredNotifications = combinedNotifications.where((n) => n.isRead).toList();
+    } else {
+      filteredNotifications = combinedNotifications;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () => notifProvider.loadNotifications(),
+          onRefresh: () async {
+            final user = context.read<AuthProvider>().user;
+            await Future.wait([
+              notifProvider.loadNotifications(),
+              taskProvider.loadMyPlans(currentUserId: user?.id),
+            ]);
+          },
           child: ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
               AppHeader(
                 title: 'Thông báo',
-                subtitle: '${notifProvider.unreadCount} chưa xem',
+                subtitle: '$unreadCount chưa xem',
               ),
               const SizedBox(height: 12),
 
-              // SECTION 1: USER NOTIFICATIONS LIST (DATABASE & LIVE PUSH)
-              const Text('Thông báo của tôi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              const SizedBox(height: 10),
+              // SECTION 1: USER NOTIFICATIONS LIST (DATABASE & LIVE PUSH & SYNTHESIZED ASSIGNMENTS)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Thông báo của tôi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  Text(
+                    'Tổng: ${combinedNotifications.length}',
+                    style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Filter Chips Row
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildFilterChip('ALL', 'Tất cả (${combinedNotifications.length})'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('UNREAD', 'Chưa đọc ($unreadCount)'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('READ', 'Đã đọc ($readCount)'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
 
               if (notifProvider.isLoading) ...[
                 const AppLoadingIndicator(message: 'Đang nạp thông báo...'),
-              ] else if (notifProvider.notifications.isEmpty) ...[
-                const EmptyStateWidget(
-                  message: 'Bạn chưa có thông báo nào.',
+              ] else if (filteredNotifications.isEmpty) ...[
+                EmptyStateWidget(
+                  message: _selectedFilter == 'UNREAD'
+                      ? 'Không có thông báo chưa đọc.'
+                      : _selectedFilter == 'READ'
+                          ? 'Không có thông báo nào đã đọc.'
+                          : 'Bạn chưa có thông báo nào.',
                   icon: LucideIcons.bell,
                 ),
               ] else ...[
-                ...notifProvider.notifications.map(
+                ...filteredNotifications.map(
                   (n) => InkWell(
-                    onTap: () {
-                      notifProvider.markAsRead(n.notificationId);
-                      context.push('/staff/notifications/${n.notificationId}');
+                    onTap: () async {
+                      await notifProvider.markAsRead(n.notificationId);
+                      if (context.mounted) {
+                        if (n.notificationId.startsWith('plan_')) {
+                          final planId = n.notificationId.replaceFirst('plan_', '');
+                          context.push('/staff/tasks/$planId');
+                        }
+                      }
                     },
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 8),
@@ -184,6 +274,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             setState(() => _confirmingPlanId = plan.planId);
                             try {
                               await taskProvider.updatePlanStatus(plan.planId, 'CONFIRMED');
+                              if (context.mounted) {
+                                context.push('/staff/tasks/${plan.planId}');
+                              }
                             } finally {
                               if (mounted) setState(() => _confirmingPlanId = null);
                             }
@@ -195,6 +288,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String value, String label) {
+    final isSelected = _selectedFilter == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFilter = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.borderLight,
+          ),
+          boxShadow: isSelected
+              ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 4, offset: const Offset(0, 2))]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : AppColors.textSecondary,
           ),
         ),
       ),

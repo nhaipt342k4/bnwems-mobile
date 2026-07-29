@@ -21,12 +21,22 @@ class ManagerOrderService {
     if (paymentStatus != null && paymentStatus.isNotEmpty) query['paymentStatus'] = paymentStatus;
     if (search != null && search.isNotEmpty) query['search'] = search;
 
-    final result = await _apiClient.fetchData<List<dynamic>>(
+    final result = await _apiClient.fetchData<dynamic>(
       '/orders',
       queryParameters: query,
     );
 
-    return result.map((item) => ManagerOrder.fromJson(item as Map<String, dynamic>)).toList();
+    if (result == null) return [];
+    List<dynamic> list;
+    if (result is List) {
+      list = result;
+    } else if (result is Map && result['data'] is List) {
+      list = result['data'] as List;
+    } else {
+      list = [];
+    }
+
+    return list.map((item) => ManagerOrder.fromJson(item as Map<String, dynamic>)).toList();
   }
 
   /// GET /orders/:id

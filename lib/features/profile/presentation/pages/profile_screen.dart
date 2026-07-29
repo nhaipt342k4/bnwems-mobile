@@ -84,6 +84,61 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
+            // Account Actions Card
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderLight),
+              ),
+              child: Column(
+                children: [
+                  InkWell(
+                    onTap: () => context.push('/staff/profile/edit'),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(LucideIcons.userCheck, color: AppColors.primary, size: 20),
+                              SizedBox(width: 12),
+                              Text('Cập nhật hồ sơ cá nhân', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                            ],
+                          ),
+                          Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  InkWell(
+                    onTap: () => context.push('/staff/profile/change-password'),
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                    child: const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(LucideIcons.keyRound, color: Colors.orange, size: 20),
+                              SizedBox(width: 12),
+                              Text('Đổi mật khẩu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                            ],
+                          ),
+                          Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // My Team Navigation (for Lead role)
             if (user != null && user.isLead) ...[
               InkWell(

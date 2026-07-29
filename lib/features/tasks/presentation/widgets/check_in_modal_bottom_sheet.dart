@@ -173,7 +173,7 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
 
     if (_photoFile == null) {
       setState(() {
-        _submitError = 'Vui lòng chụp hoặc chọn ảnh bằng chứng điểm danh.';
+        _submitError = 'Vui lòng chụp ảnh bằng chứng điểm danh trực tiếp từ máy ảnh.';
       });
       return;
     }
@@ -340,30 +340,16 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
               ],
             ),
           ] else ...[
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pickImage(ImageSource.camera),
-                    icon: const Icon(LucideIcons.camera, size: 18),
-                    label: const Text('Chụp ảnh'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _pickImage(ImageSource.camera),
+                icon: const Icon(LucideIcons.camera, size: 18),
+                label: const Text('Chụp ảnh điểm danh trực tiếp'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pickImage(ImageSource.gallery),
-                    icon: const Icon(LucideIcons.image, size: 18),
-                    label: const Text('Thư viện'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
 

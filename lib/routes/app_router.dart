@@ -1,11 +1,14 @@
 import 'package:go_router/go_router.dart';
 import '../features/attendance/presentation/pages/attendance_history_screen.dart';
 import '../features/authentication/presentation/pages/login_screen.dart';
+import '../features/authentication/presentation/pages/forgot_password_screen.dart';
 import '../features/authentication/presentation/providers/auth_provider.dart';
 import '../features/dashboard/presentation/pages/dashboard_screen.dart';
 import '../features/notifications/presentation/pages/notification_detail_screen.dart';
 import '../features/notifications/presentation/pages/notifications_screen.dart';
 import '../features/profile/presentation/pages/profile_screen.dart';
+import '../features/profile/presentation/pages/edit_profile_screen.dart';
+import '../features/profile/presentation/pages/change_password_screen.dart';
 import '../features/schedule/presentation/pages/schedule_calendar_screen.dart';
 import '../features/tasks/presentation/pages/task_detail_screen.dart';
 import '../features/tasks/presentation/pages/task_list_screen.dart';
@@ -22,6 +25,7 @@ import '../features/manager/presentation/pages/manager_schedule_screen.dart';
 import '../features/manager/presentation/pages/manager_return_reports_screen.dart';
 import '../features/manager/presentation/pages/manager_return_report_detail_screen.dart';
 import '../features/manager/presentation/pages/manager_profile_screen.dart';
+import '../features/manager/presentation/pages/manager_notifications_screen.dart';
 import '../shared/main_layout.dart';
 
 GoRouter createRouter(AuthProvider authProvider) {
@@ -30,7 +34,7 @@ GoRouter createRouter(AuthProvider authProvider) {
     refreshListenable: authProvider,
     redirect: (context, state) {
       final status = authProvider.status;
-      final isLoggingIn = state.matchedLocation == '/auth/login';
+      final isLoggingIn = state.matchedLocation == '/auth/login' || state.matchedLocation == '/auth/forgot-password';
 
       if (status == AuthStatus.uninitialized) return null;
 
@@ -68,6 +72,10 @@ GoRouter createRouter(AuthProvider authProvider) {
       GoRoute(
         path: '/auth/login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/auth/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) => MainLayout(child: child),
@@ -115,6 +123,14 @@ GoRouter createRouter(AuthProvider authProvider) {
           final id = state.pathParameters['id']!;
           return NotificationDetailScreen(notificationId: id);
         },
+      ),
+      GoRoute(
+        path: '/staff/profile/edit',
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/staff/profile/change-password',
+        builder: (context, state) => const ChangePasswordScreen(),
       ),
 
       // Manager Shell Routes & Pages
@@ -178,6 +194,18 @@ GoRouter createRouter(AuthProvider authProvider) {
           final id = state.pathParameters['id']!;
           return ManagerReturnReportDetailScreen(reportId: id);
         },
+      ),
+      GoRoute(
+        path: '/manager/notifications',
+        builder: (context, state) => const ManagerNotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/manager/profile/edit',
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/manager/profile/change-password',
+        builder: (context, state) => const ChangePasswordScreen(),
       ),
     ],
   );

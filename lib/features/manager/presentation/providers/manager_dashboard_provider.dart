@@ -40,7 +40,9 @@ class ManagerDashboardProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final todayIso = Formatters.toIsoDateOnly(DateTime.now());
+      final now = DateTime.now();
+      final todayIso = Formatters.toIsoDateOnly(now);
+      final maxDateIso = Formatters.toIsoDateOnly(DateTime(now.year, now.month + 1, now.day));
 
       final results = await Future.wait([
         _scheduleService.getSchedulePlans(
@@ -60,7 +62,10 @@ class ManagerDashboardProvider extends ChangeNotifier {
       _todayPlans = plans;
 
       _upcomingOrders = orders
-          .where((o) => o.eventDate.compareTo(todayIso) >= 0 && o.orderStatus != 'CANCELLED')
+          .where((o) =>
+              o.eventDate.compareTo(todayIso) >= 0 &&
+              o.eventDate.compareTo(maxDateIso) <= 0 &&
+              o.orderStatus != 'CANCELLED')
           .toList()
         ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
 

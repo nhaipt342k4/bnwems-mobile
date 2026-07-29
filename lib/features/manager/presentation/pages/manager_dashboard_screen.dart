@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/services/fcm_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
+import '../../../notifications/presentation/providers/notification_provider.dart';
 import '../providers/manager_dashboard_provider.dart';
 
 class ManagerDashboardScreen extends StatefulWidget {
@@ -18,8 +20,10 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    FcmService().initialize();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ManagerDashboardProvider>().loadDashboardData();
+      context.read<NotificationProvider>().loadNotifications();
     });
   }
 
@@ -115,6 +119,48 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
             ),
           ],
         ),
+        actions: [
+          Consumer<NotificationProvider>(
+            builder: (context, notifProvider, _) {
+              final unreadCount = notifProvider.unreadCount;
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(LucideIcons.bell, color: AppColors.textPrimary),
+                    onPressed: () => context.push('/manager/notifications'),
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () => provider.loadDashboardData(),
@@ -177,146 +223,6 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
                   ),
                 ],
               ),
-
-              const SizedBox(height: 24),
-
-              // Section Lịch trình hôm nay
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Lịch trình hôm nay',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                  ),
-                  GestureDetector(
-                    onTap: () => context.go('/manager/schedule'),
-                    child: const Row(
-                      children: [
-                        Text('Xem tất cả', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                        Icon(LucideIcons.chevronRight, size: 16, color: AppColors.primary),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              if (provider.isLoading)
-                const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
-              else if (provider.todayPlans.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.borderLight),
-                  ),
-                  child: const Text('Không có công việc nào hôm nay.', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
-                )
-              else
-                Column(
-                  children: provider.todayPlans.take(5).map((plan) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.borderLight),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: _getStatusBgColor(plan.status),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  Formatters.formatStatus(plan.status),
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _getStatusTextColor(plan.status)),
-                                ),
-                              ),
-                              Text(plan.planCode, style: const TextStyle(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            plan.taskName ?? 'Kế hoạch',
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${plan.eventName ?? plan.orderCode ?? ''} ${plan.customerName != null ? '— ${plan.customerName}' : ''}',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(LucideIcons.clock, size: 13, color: AppColors.textMuted),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${Formatters.formatTime(plan.startTime)}${plan.endTime != null ? ' - ${Formatters.formatTime(plan.endTime)}' : ''}',
-                                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                              ),
-                            ],
-                          ),
-                          if (plan.location != null || plan.orderLocation != null) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(LucideIcons.mapPin, size: 13, color: AppColors.textMuted),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    plan.location ?? plan.orderLocation!,
-                                    style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                          if (plan.assignees != null && plan.assignees!.isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            const Divider(height: 1),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: plan.assignees!.map((assignee) {
-                                final isLead = assignee.role == 'LEAD';
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: isLead ? Colors.purple.shade50 : Colors.blue.shade50,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(LucideIcons.user, size: 11, color: isLead ? Colors.purple.shade700 : Colors.blue.shade700),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        assignee.fullName,
-                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isLead ? Colors.purple.shade700 : Colors.blue.shade700),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
 
               const SizedBox(height: 24),
 
@@ -385,18 +291,6 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
                                       child: Text(
                                         Formatters.formatStatus(order.orderStatus),
                                         style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _getStatusTextColor(order.orderStatus)),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: _getStatusBgColor(order.paymentStatus),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        Formatters.formatPaymentStatus(order.paymentStatus),
-                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _getStatusTextColor(order.paymentStatus)),
                                       ),
                                     ),
                                   ],

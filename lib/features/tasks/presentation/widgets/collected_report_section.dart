@@ -198,7 +198,12 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
             children: [
               const Icon(LucideIcons.checkCircle2, color: AppColors.completedText, size: 16),
               const SizedBox(width: 6),
-              Text('ĐÃ GỬI BÁO CÁO THU HỒI ($title)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.completedText)),
+              Expanded(
+                child: Text(
+                  'ĐÃ GỬI BÁO CÁO THU HỒI ($title)',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.completedText),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),

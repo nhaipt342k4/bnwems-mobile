@@ -32,17 +32,17 @@ class CreateSurveyReportBody {
   Map<String, dynamic> toJson() {
     return {
       'orderId': orderId,
-      if (planId != null) 'planId': planId,
+      if (planId != null && planId!.trim().isNotEmpty) 'planId': planId,
       'surveyDate': surveyDate,
       'location': location,
       'area': area,
       'length': length,
       'width': width,
       'entrance': entrance,
-      if (siteConstraints != null) 'siteConstraints': siteConstraints,
-      if (proposedItems != null) 'proposedItems': proposedItems,
-      if (notes != null) 'notes': notes,
-      if (evidenceId != null) 'evidenceId': evidenceId,
+      if (siteConstraints != null && siteConstraints!.trim().isNotEmpty) 'siteConstraints': siteConstraints,
+      if (proposedItems != null && proposedItems!.trim().isNotEmpty) 'proposedItems': proposedItems,
+      if (notes != null && notes!.trim().isNotEmpty) 'notes': notes,
+      if (evidenceId != null && evidenceId!.trim().isNotEmpty) 'evidenceId': evidenceId,
     };
   }
 }

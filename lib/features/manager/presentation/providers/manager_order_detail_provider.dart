@@ -50,27 +50,37 @@ class ManagerOrderDetailProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    try {
-      final results = await Future.wait([
-        _orderService.getOrder(orderId),
-        _depositService.getOrderDeposits(orderId),
-        _settlementService.getOrderSettlement(orderId),
-        _scheduleService.getSchedulePlans(orderId: orderId),
-      ]);
+    int pendingCount = 4;
+    void checkDone() {
+      pendingCount--;
+      if (pendingCount <= 0) {
+        _isLoading = false;
+      }
+      notifyListeners();
+    }
 
-      _order = results[0] as ManagerOrder;
-      _deposits = results[1] as List<Deposit>;
-      _settlement = results[2] as Settlement?;
-      final rawPlans = results[3] as List<ManagerSchedulePlan>;
+    // 1. Core Order Info (Triggers UI render for Order header, items, customer)
+    _orderService.getOrder(orderId).then((order) {
+      _order = order;
+    }).catchError((e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+    }).whenComplete(checkDone);
+
+    // 2. Deposits (Triggers UI render for Deposit card)
+    _depositService.getOrderDeposits(orderId).then((deposits) {
+      _deposits = deposits;
+    }).catchError((_) {}).whenComplete(checkDone);
+
+    // 3. Settlement (Triggers UI render for Settlement card)
+    _settlementService.getOrderSettlement(orderId).then((settlement) {
+      _settlement = settlement;
+    }).catchError((_) {}).whenComplete(checkDone);
+
+    // 4. Schedule Plans (Triggers UI render for Work tasks timeline)
+    _scheduleService.getSchedulePlans(orderId: orderId).then((rawPlans) {
       rawPlans.sort((a, b) => a.startTime.compareTo(b.startTime));
       _plans = rawPlans;
-
-      _isLoading = false;
-    } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
-      _isLoading = false;
-    }
-    notifyListeners();
+    }).catchError((_) {}).whenComplete(checkDone);
   }
 
   Future<bool> cancelOrder(String orderId, String reason) async {

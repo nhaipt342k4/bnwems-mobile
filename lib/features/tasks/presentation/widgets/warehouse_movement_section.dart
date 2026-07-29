@@ -30,18 +30,10 @@ class WarehouseMovementSection extends StatefulWidget {
 }
 
 class _WarehouseMovementSectionState extends State<WarehouseMovementSection> {
-  final Map<String, int> _selectedQuantities = {};
   final _notesController = TextEditingController();
   bool _isSubmitting = false;
+  bool _isConfirmed = false;
   String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    for (final item in widget.items) {
-      _selectedQuantities[item.itemId] = item.quantity;
-    }
-  }
 
   @override
   void dispose() {
@@ -50,15 +42,11 @@ class _WarehouseMovementSectionState extends State<WarehouseMovementSection> {
   }
 
   Future<void> _handleSubmit() async {
-    final movementItems = _selectedQuantities.entries
-        .where((e) => e.value > 0)
-        .map((e) => {'itemId': e.key, 'quantity': e.value})
+    final movementItems = widget.items
+        .map((e) => {'itemId': e.itemId, 'quantity': e.quantity})
         .toList();
 
-    if (movementItems.isEmpty) {
-      setState(() => _error = 'Vui lòng chọn ít nhất 1 thiết bị xuất/nhập kho.');
-      return;
-    }
+    if (movementItems.isEmpty) return;
 
     setState(() {
       _isSubmitting = true;
@@ -72,11 +60,16 @@ class _WarehouseMovementSectionState extends State<WarehouseMovementSection> {
           notes: _notesController.text.trim(),
         ),
       );
+      setState(() {
+        _isConfirmed = true;
+      });
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = e.toString().replaceAll('Exception: ', '');
         _isSubmitting = false;
       });
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -94,20 +87,34 @@ class _WarehouseMovementSectionState extends State<WarehouseMovementSection> {
         children: [
           Row(
             children: [
-              Icon(LucideIcons.package, size: 18, color: AppColors.primary),
+              const Icon(LucideIcons.package, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              const Text(
-                'Ghi nhận Xuất / Nhập kho hiện trường',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              const Expanded(
+                child: Text(
+                  'Xác nhận Xuất kho thiết bị hiện trường',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
               ),
+              if (_isConfirmed)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.green.shade300),
+                  ),
+                  child: Text(
+                    'ĐÃ XÁC NHẬN XUẤT KHO',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 12),
           ...widget.items.map((item) {
-            final qty = _selectedQuantities[item.itemId] ?? 0;
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(10),
@@ -119,29 +126,24 @@ class _WarehouseMovementSectionState extends State<WarehouseMovementSection> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(item.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        Text('Yêu cầu: ${item.quantity} ${item.unit}', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Số lượng yêu cầu xuất kho: ${item.quantity} ${item.unit}',
+                          style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                        ),
                       ],
                     ),
                   ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(LucideIcons.minusCircle, size: 20, color: AppColors.textSecondary),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: qty > 0 ? () => setState(() => _selectedQuantities[item.itemId] = qty - 1) : null,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text('$qty', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                      ),
-                      IconButton(
-                        icon: const Icon(LucideIcons.plusCircle, size: 20, color: AppColors.primary),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => setState(() => _selectedQuantities[item.itemId] = qty + 1),
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '${item.quantity} ${item.unit}',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                    ),
                   ),
                 ],
               ),
@@ -149,9 +151,10 @@ class _WarehouseMovementSectionState extends State<WarehouseMovementSection> {
           }),
           const SizedBox(height: 12),
           AppTextField(
-            label: 'Ghi chú xuất kho',
-            hintText: 'Lưu ý vận chuyển...',
+            label: 'Ghi chú xuất kho (nếu có)',
+            hintText: 'Nhập ghi chú cho thủ kho...',
             controller: _notesController,
+            readOnly: _isConfirmed,
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
@@ -159,10 +162,10 @@ class _WarehouseMovementSectionState extends State<WarehouseMovementSection> {
           ],
           const SizedBox(height: 16),
           AppButton(
-            text: 'Xác nhận xuất kho',
+            text: _isConfirmed ? 'Đã xác nhận xuất kho' : 'Xác nhận xuất kho',
             isFullWidth: true,
             isLoading: _isSubmitting,
-            onPressed: _handleSubmit,
+            onPressed: _isConfirmed ? null : _handleSubmit,
           ),
         ],
       ),

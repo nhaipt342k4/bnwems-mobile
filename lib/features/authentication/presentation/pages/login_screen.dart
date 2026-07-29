@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -101,15 +102,38 @@ class _LoginScreenState extends State<LoginScreen> {
                       AppTextField(
                         label: 'Mật khẩu',
                         hintText: '••••••••',
-                        obscureText: true,
+                        obscureText: _obscurePassword,
                         controller: _passwordController,
                         prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            size: 20,
+                            color: AppColors.textMuted,
+                          ),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        ),
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
                             return 'Vui lòng nhập mật khẩu';
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () => context.push('/auth/forgot-password'),
+                          child: const Text(
+                            'Quên mật khẩu?',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
                       ),
                       if (auth.errorMessage != null) ...[
                         const SizedBox(height: 16),

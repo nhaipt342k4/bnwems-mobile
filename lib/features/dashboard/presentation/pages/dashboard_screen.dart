@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -34,11 +33,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
     final taskProvider = context.watch<TaskProvider>();
-    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final todayStr = Formatters.toIsoDateOnly(DateTime.now());
 
-    final todayPlans = taskProvider.myPlans
-        .where((plan) => plan.startTime.startsWith(todayStr))
-        .toList()
+    final todayPlans = taskProvider.myPlans.where((plan) {
+      try {
+        final localDate = DateTime.parse(plan.startTime).toLocal();
+        return Formatters.toIsoDateOnly(localDate) == todayStr;
+      } catch (_) {
+        return plan.startTime.startsWith(todayStr);
+      }
+    }).toList()
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
     final pendingCount = taskProvider.myPlans.where((plan) => plan.status == 'PENDING').length;
@@ -121,8 +125,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               QuickAttendanceCard(
                 plan: primaryTodayPlan,
                 myAssignee: primaryAssignee,
+                activePlan: user != null ? taskProvider.getActiveCheckedInPlan(user.id) : null,
                 onCheckInPressed: () {
                   if (primaryTodayPlan != null && user != null) {
+                    final activePlan = taskProvider.getActiveCheckedInPlan(user.id);
+                    if (activePlan != null && activePlan.planId != primaryTodayPlan.planId) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Bạn đang thực hiện công việc "${activePlan.taskName}" (${activePlan.planCode}) chưa check-out. Vui lòng check-out trước khi check-in công việc mới.'),
+                          backgroundColor: Colors.red.shade700,
+                          duration: const Duration(seconds: 4),
+                        ),
+                      );
+                      return;
+                    }
                     CheckInModalBottomSheet.show(
                       context,
                       taskName: primaryTodayPlan.taskName,
@@ -180,25 +196,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ] else ...[
                 ...todayPlans.map(
-                  (plan) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: CurrentTaskCard(
-                      plan: plan,
-                      myAssignee: user != null ? taskProvider.getMyAssignee(plan, user.id) : null,
-                      onCheckInPressed: () {
-                        if (user != null) {
-                          CheckInModalBottomSheet.show(
-                            context,
-                            taskName: plan.taskName,
-                            locationName: plan.location,
-                            onConfirmCheckIn: (photoFile) async {
-                              await taskProvider.checkIn(plan.planId, user.id);
-                            },
-                          );
-                        }
-                      },
-                    ),
-                  ),
+                  (plan) {
+                    final activePlan = user != null ? taskProvider.getActiveCheckedInPlan(user.id) : null;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: CurrentTaskCard(
+                        plan: plan,
+                        myAssignee: user != null ? taskProvider.getMyAssignee(plan, user.id) : null,
+                        activePlan: activePlan,
+                        onCheckInPressed: () {
+                          if (user != null) {
+                            final activePlan = taskProvider.getActiveCheckedInPlan(user.id);
+                            if (activePlan != null && activePlan.planId != plan.planId) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Bạn đang thực hiện công việc "${activePlan.taskName}" (${activePlan.planCode}) chưa check-out. Vui lòng check-out trước khi check-in công việc mới.'),
+                                  backgroundColor: Colors.red.shade700,
+                                  duration: const Duration(seconds: 4),
+                                ),
+                              );
+                              return;
+                            }
+                            CheckInModalBottomSheet.show(
+                              context,
+                              taskName: plan.taskName,
+                              locationName: plan.location,
+                              onConfirmCheckIn: (photoFile) async {
+                                await taskProvider.checkIn(plan.planId, user.id);
+                              },
+                            );
+                          }
+                        },
+                      ),
+                    );
+                  },
                 ),
               ],
             ],
