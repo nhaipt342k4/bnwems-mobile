@@ -12,11 +12,28 @@ class Formatters {
     return _currencyFormat.format(amount);
   }
 
+  /// Lấy thời gian hiện tại theo chuẩn Múi giờ Việt Nam (GMT+7)
+  static DateTime nowInVietnam() {
+    return DateTime.now().toUtc().add(const Duration(hours: 7));
+  }
+
+  /// Chuẩn hóa và chuyển đổi chuỗi ngày giờ về chuẩn Múi giờ Việt Nam (GMT+7)
+  static DateTime parseVietnamDateTime(String? isoString) {
+    if (isoString == null || isoString.trim().isEmpty) return nowInVietnam();
+    final cleanStr = isoString.trim();
+    if (!cleanStr.contains('Z') && !cleanStr.contains('+') && !RegExp(r'-\d{2}:\d{2}$').hasMatch(cleanStr)) {
+      return DateTime.parse(cleanStr);
+    }
+    final dt = DateTime.parse(cleanStr);
+    final utc = dt.toUtc();
+    return utc.add(const Duration(hours: 7));
+  }
+
   /// Định dạng ngày: DD/MM/YYYY (ví dụ 26/07/2026)
   static String formatDate(String? isoString) {
     if (isoString == null || isoString.isEmpty) return '--';
     try {
-      final dateTime = DateTime.parse(isoString).toLocal();
+      final dateTime = parseVietnamDateTime(isoString);
       return DateFormat('dd/MM/yyyy').format(dateTime);
     } catch (_) {
       return isoString;
@@ -27,7 +44,7 @@ class Formatters {
   static String formatFullDate(String? isoString) {
     if (isoString == null || isoString.isEmpty) return '--';
     try {
-      final dateTime = DateTime.parse(isoString).toLocal();
+      final dateTime = parseVietnamDateTime(isoString);
       final dayNames = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
       final dayName = dayNames[dateTime.weekday % 7];
       return '$dayName, ${DateFormat('dd/MM/yyyy').format(dateTime)}';
@@ -40,7 +57,7 @@ class Formatters {
   static String formatTime(String? isoString) {
     if (isoString == null || isoString.isEmpty) return '--';
     try {
-      final dateTime = DateTime.parse(isoString).toLocal();
+      final dateTime = parseVietnamDateTime(isoString);
       return DateFormat('HH:mm').format(dateTime);
     } catch (_) {
       return isoString;
@@ -51,7 +68,7 @@ class Formatters {
   static String formatDateTime(String? isoString) {
     if (isoString == null || isoString.isEmpty) return '--';
     try {
-      final dateTime = DateTime.parse(isoString).toLocal();
+      final dateTime = parseVietnamDateTime(isoString);
       return DateFormat('HH:mm - dd/MM/yyyy').format(dateTime);
     } catch (_) {
       return isoString;

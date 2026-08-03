@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/empty_state_widget.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
+import '../../../tasks/data/services/evidence_api_service.dart';
 import '../../../tasks/presentation/providers/task_provider.dart';
 import '../../../tasks/presentation/widgets/check_in_modal_bottom_sheet.dart';
 import '../../../tasks/presentation/widgets/current_task_card.dart';
@@ -69,7 +70,7 @@ class _ScheduleCalendarScreenState extends State<ScheduleCalendarScreen> {
 
     final datesWithPlans = taskProvider.myPlans.map((p) {
       try {
-        final localDate = DateTime.parse(p.startTime).toLocal();
+        final localDate = Formatters.parseVietnamDateTime(p.startTime);
         return Formatters.toIsoDateOnly(localDate);
       } catch (_) {
         return p.startTime.split('T').first;
@@ -78,7 +79,7 @@ class _ScheduleCalendarScreenState extends State<ScheduleCalendarScreen> {
 
     final dayPlans = taskProvider.myPlans.where((p) {
       try {
-        final localDate = DateTime.parse(p.startTime).toLocal();
+        final localDate = Formatters.parseVietnamDateTime(p.startTime);
         return Formatters.toIsoDateOnly(localDate) == selectedDateStr;
       } catch (_) {
         return p.startTime.startsWith(selectedDateStr);
@@ -249,8 +250,21 @@ class _ScheduleCalendarScreenState extends State<ScheduleCalendarScreen> {
                                   context,
                                   taskName: plan.taskName,
                                   locationName: plan.location,
-                                  onConfirmCheckIn: (photoFile) async {
-                                    await taskProvider.checkIn(plan.planId, user.id);
+                                  targetLatitude: plan.latitude,
+                                  targetLongitude: plan.longitude,
+                                  onConfirmCheckIn: (photoFile, lat, lng) async {
+                                    String? evidenceId;
+                                    try {
+                                      final ev = await EvidenceApiService().upload(photoFile);
+                                      evidenceId = ev.evidenceId;
+                                    } catch (_) {}
+                                    await taskProvider.checkIn(
+                                      plan.planId,
+                                      user.id,
+                                      checkInEvidenceId: evidenceId,
+                                      latitude: lat,
+                                      longitude: lng,
+                                    );
                                   },
                                 );
                               }

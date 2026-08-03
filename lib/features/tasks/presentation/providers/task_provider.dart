@@ -169,7 +169,13 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> checkIn(String planId, String userId, {String? checkInEvidenceId}) async {
+  Future<void> checkIn(
+    String planId,
+    String userId, {
+    String? checkInEvidenceId,
+    double? latitude,
+    double? longitude,
+  }) async {
     final activePlan = getActiveCheckedInPlan(userId);
     if (activePlan != null && activePlan.planId != planId) {
       throw Exception(
@@ -180,6 +186,8 @@ class TaskProvider extends ChangeNotifier {
       planId,
       userId,
       checkInEvidenceId: checkInEvidenceId,
+      latitude: latitude,
+      longitude: longitude,
     );
     final index = _myPlans.indexWhere((p) => p.planId == planId);
     if (index >= 0) {
@@ -188,8 +196,18 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> checkOut(String planId, String userId) async {
-    final updated = await _planApiService.checkOut(planId, userId);
+  Future<void> checkOut(
+    String planId,
+    String userId, {
+    double? latitude,
+    double? longitude,
+  }) async {
+    final updated = await _planApiService.checkOut(
+      planId,
+      userId,
+      latitude: latitude,
+      longitude: longitude,
+    );
     final index = _myPlans.indexWhere((p) => p.planId == planId);
     if (index >= 0) {
       _myPlans[index] = updated;

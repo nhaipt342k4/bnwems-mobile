@@ -123,11 +123,59 @@ class _SettlementSectionState extends State<SettlementSection> {
     return calculated < 0 ? 0 : calculated;
   }
 
-  Future<void> _pickPhoto() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+  Future<void> _pickPhoto(ImageSource source) async {
+    final XFile? image = await _picker.pickImage(source: source, imageQuality: 85);
     if (image != null) {
       setState(() => _photoFile = File(image.path));
     }
+  }
+
+  void _showImageSourcePickerModal() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tải ảnh bằng chứng quyết toán',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10)),
+                child: Icon(LucideIcons.camera, color: Colors.blue.shade800, size: 20),
+              ),
+              title: const Text('Chụp ảnh từ máy ảnh', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickPhoto(ImageSource.camera);
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(10)),
+                child: Icon(LucideIcons.image, color: Colors.green.shade800, size: 20),
+              ),
+              title: const Text('Chọn ảnh từ thư viện', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickPhoto(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _handleCreateOrUpdateSettlement() async {
@@ -588,9 +636,9 @@ class _SettlementSectionState extends State<SettlementSection> {
                         ),
                       ] else ...[
                         OutlinedButton.icon(
-                          onPressed: _pickPhoto,
+                          onPressed: _showImageSourcePickerModal,
                           icon: const Icon(LucideIcons.camera, size: 18),
-                          label: const Text('Chụp ảnh bằng chứng quyết toán'),
+                          label: const Text('Chụp ảnh hoặc chọn ảnh từ thư viện'),
                           style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 44)),
                         ),
                       ],

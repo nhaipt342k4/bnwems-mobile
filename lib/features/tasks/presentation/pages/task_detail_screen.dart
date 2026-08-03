@@ -25,6 +25,7 @@ import '../widgets/handover_section.dart';
 import '../widgets/settlement_section.dart';
 import '../widgets/supplier_transaction_section.dart';
 import '../widgets/survey_report_section.dart';
+import '../widgets/technical_task_view.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   final String planId;
@@ -240,6 +241,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
   }
 
   Widget _buildOverviewTab(SchedulePlan plan, SchedulePlanAssignee? myAssignee, bool isLead, AuthUser? user, TaskProvider taskProvider) {
+    if (!isLead) {
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        child: TechnicalTaskView(
+          plan: plan,
+          myAssignee: myAssignee,
+          user: user,
+          taskProvider: taskProvider,
+          items: _items,
+        ),
+      );
+    }
+
     return RefreshIndicator(
       onRefresh: _loadData,
       child: SingleChildScrollView(
@@ -277,7 +291,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   const SizedBox(height: 12),
                   _buildIconDetail(LucideIcons.user, 'Khách hàng', '${plan.customerName} (${plan.customerPhone})'),
                   const SizedBox(height: 6),
-                  _buildIconDetail(LucideIcons.mapPin, 'Địa chỉ', plan.customerAddress),
+                  _buildIconDetail(
+                    LucideIcons.mapPin,
+                    'Địa chỉ hiện trường',
+                    plan.location != null && plan.location!.trim().isNotEmpty
+                        ? plan.location!
+                        : (plan.customerAddress.isNotEmpty ? plan.customerAddress : 'Chưa có địa chỉ'),
+                  ),
                   const SizedBox(height: 6),
                   _buildIconDetail(LucideIcons.clock, 'Thời gian', '${Formatters.formatDateTime(plan.startTime)}${plan.endTime != null ? ' - ${Formatters.formatTime(plan.endTime)}' : ''}'),
                 ],
@@ -597,8 +617,23 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   context,
                   taskName: plan.taskName,
                   locationName: plan.location,
-                  onConfirmCheckIn: (photoFile) async {
-                    await context.read<TaskProvider>().checkIn(plan.planId, user.id);
+                  targetLatitude: plan.latitude,
+                  targetLongitude: plan.longitude,
+                  onConfirmCheckIn: (photoFile, lat, lng) async {
+                    String? evidenceId;
+                    try {
+                      final ev = await _evidenceService.upload(photoFile);
+                      evidenceId = ev.evidenceId;
+                    } catch (_) {}
+                    if (context.mounted) {
+                      await context.read<TaskProvider>().checkIn(
+                        plan.planId,
+                        user.id,
+                        checkInEvidenceId: evidenceId,
+                        latitude: lat,
+                        longitude: lng,
+                      );
+                    }
                   },
                 );
               },
@@ -608,8 +643,42 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
               text: 'Xác nhận Check-out rời vị trí',
               isFullWidth: true,
               variant: AppButtonVariant.secondary,
-              onPressed: () {
-                context.read<TaskProvider>().checkOut(plan.planId, user.id);
+              onPressed: () async {
+                try {
+                  await context.read<TaskProvider>().checkOut(plan.planId, user.id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Check-out thành công!'),
+                        backgroundColor: AppColors.completedText,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    final cleanMsg = e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', '');
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: const Row(
+                          children: [
+                            Icon(LucideIcons.alertTriangle, color: AppColors.cancelledText, size: 22),
+                            SizedBox(width: 8),
+                            Text('Chưa thể Check-out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        content: Text(cleanMsg, style: const TextStyle(fontSize: 14)),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Đã hiểu'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                }
               },
             ),
           ],

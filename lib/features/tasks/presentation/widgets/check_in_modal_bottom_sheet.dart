@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../../../core/config/app_config.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/geofence_util.dart';
 import '../../../../core/widgets/app_button.dart';
 
 class CheckInModalBottomSheet extends StatefulWidget {
@@ -13,7 +11,7 @@ class CheckInModalBottomSheet extends StatefulWidget {
   final String? locationName;
   final double? targetLatitude;
   final double? targetLongitude;
-  final Future<void> Function(File photoFile) onConfirmCheckIn;
+  final Future<void> Function(File photoFile, double? latitude, double? longitude) onConfirmCheckIn;
 
   const CheckInModalBottomSheet({
     super.key,
@@ -30,7 +28,7 @@ class CheckInModalBottomSheet extends StatefulWidget {
     String? locationName,
     double? targetLatitude,
     double? targetLongitude,
-    required Future<void> Function(File photoFile) onConfirmCheckIn,
+    required Future<void> Function(File photoFile, double? latitude, double? longitude) onConfirmCheckIn,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -52,95 +50,223 @@ class CheckInModalBottomSheet extends StatefulWidget {
 
 class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
   bool _isCheckingGps = false;
-  bool _gpsVerified = false;
-  String? _gpsError;
-  double? _distanceMeters;
+  bool _hasGpsPermission = false;
+  String? _gpsPermissionError;
+  Position? _currentPosition;
 
   File? _photoFile;
   final ImagePicker _picker = ImagePicker();
   bool _isSubmitting = false;
   String? _submitError;
 
-  Future<void> _verifyGpsLocation() async {
+  @override
+  void initState() {
+    super.initState();
+    _checkAndInitGpsPermission();
+  }
+
+  Future<void> _checkAndInitGpsPermission() async {
     setState(() {
       _isCheckingGps = true;
-      _gpsError = null;
+      _gpsPermissionError = null;
+    });
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          setState(() {
+            _hasGpsPermission = false;
+            _gpsPermissionError = 'Dịch vụ định vị (GPS) trên thiết bị đang tắt.';
+            _isCheckingGps = false;
+          });
+        }
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() {
+            _hasGpsPermission = false;
+            _gpsPermissionError = permission == LocationPermission.deniedForever
+                ? 'Quyền truy cập vị trí bị chặn trong Cài đặt thiết bị.'
+                : 'Ứng dụng chưa được cấp quyền truy cập vị trí (GPS).';
+            _isCheckingGps = false;
+          });
+        }
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _hasGpsPermission = true;
+          _gpsPermissionError = null;
+          _isCheckingGps = false;
+        });
+      }
+
+      _fetchCurrentPosition();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasGpsPermission = false;
+          _gpsPermissionError = 'Không thể kiểm tra quyền vị trí: $e';
+          _isCheckingGps = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _requestGpsPermission() async {
+    setState(() {
+      _isCheckingGps = true;
+      _gpsPermissionError = null;
     });
 
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        setState(() {
-          _gpsError = 'Dịch vụ định vị GPS chưa được bật. Vui lòng bật GPS trên thiết bị.';
-          _isCheckingGps = false;
-        });
-        return;
+        await Geolocator.openLocationSettings();
+        serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          if (mounted) {
+            setState(() {
+              _hasGpsPermission = false;
+              _gpsPermissionError = 'Dịch vụ GPS chưa được bật. Vui lòng bật GPS và thử lại.';
+              _isCheckingGps = false;
+            });
+          }
+          return;
+        }
       }
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          setState(() {
-            _gpsError = 'Quyền truy cập vị trí bị từ chối.';
-            _isCheckingGps = false;
-          });
-          return;
-        }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        setState(() {
-          _gpsError = 'Quyền vị trí bị chặn vĩnh viễn trong cài đặt thiết bị.';
-          _isCheckingGps = false;
-        });
+        await Geolocator.openAppSettings();
+        if (mounted) {
+          setState(() {
+            _hasGpsPermission = false;
+            _gpsPermissionError = 'Quyền vị trí bị chặn vĩnh viễn. Vui lòng bật trong Cài đặt ứng dụng.';
+            _isCheckingGps = false;
+          });
+        }
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-
-      // Verify geofence if target coordinates available
-      if (widget.targetLatitude != null && widget.targetLongitude != null) {
-        final geofence = GeofenceUtil.checkGeofence(
-          currentLat: position.latitude,
-          currentLon: position.longitude,
-          targetLat: widget.targetLatitude!,
-          targetLon: widget.targetLongitude!,
-        );
-
-        if (!geofence.isWithinRadius) {
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        if (mounted) {
           setState(() {
-            _gpsVerified = false;
-            _distanceMeters = geofence.distanceMeters;
-            _gpsError =
-                'Vị trí của bạn vượt quá bán kính ${AppConfig.geofenceRadiusMeters.toInt()}m (${geofence.distanceMeters.toInt()}m) so với điểm công tác.';
+            _hasGpsPermission = true;
+            _gpsPermissionError = null;
             _isCheckingGps = false;
           });
-          return;
         }
-
-        setState(() {
-          _gpsVerified = true;
-          _distanceMeters = geofence.distanceMeters;
-          _gpsError = null;
-          _isCheckingGps = false;
-        });
+        await _fetchCurrentPosition();
       } else {
-        // Assume verified if no location specified
+        if (mounted) {
+          setState(() {
+            _hasGpsPermission = false;
+            _gpsPermissionError = 'Quyền truy cập vị trí bị từ chối.';
+            _isCheckingGps = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
-          _gpsVerified = true;
-          _gpsError = null;
+          _hasGpsPermission = false;
+          _gpsPermissionError = 'Không thể yêu cầu quyền vị trí: $e';
           _isCheckingGps = false;
         });
       }
-    } catch (e) {
-      setState(() {
-        _gpsError = 'Không thể xác định vị trí hiện tại: ${e.toString()}';
-        _isCheckingGps = false;
-      });
     }
+  }
+
+  Future<void> _fetchCurrentPosition() async {
+    try {
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: AndroidSettings(
+            accuracy: LocationAccuracy.high,
+            forceLocationManager: true,
+            timeLimit: const Duration(seconds: 10),
+          ),
+        );
+      } catch (_) {}
+
+      if (position == null) {
+        try {
+          position = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.high,
+              timeLimit: Duration(seconds: 10),
+            ),
+          );
+        } catch (_) {}
+      }
+
+      position ??= await Geolocator.getLastKnownPosition();
+
+      if (mounted && position != null) {
+        setState(() {
+          _currentPosition = position;
+        });
+      }
+    } catch (_) {}
+  }
+
+  void _showImageSourcePickerModal() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tải ảnh bằng chứng điểm danh',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10)),
+                child: Icon(LucideIcons.camera, color: Colors.blue.shade800, size: 20),
+              ),
+              title: const Text('Chụp ảnh từ máy ảnh', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(10)),
+                child: Icon(LucideIcons.image, color: Colors.green.shade800, size: 20),
+              ),
+              title: const Text('Chọn ảnh từ thư viện', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -154,23 +280,17 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
       if (image != null) {
         setState(() {
           _photoFile = File(image.path);
+          _submitError = null;
         });
       }
     } catch (e) {
       setState(() {
-        _submitError = 'Không thể chọn/chụp ảnh: $e';
+        _submitError = 'Không thể chụp/chọn ảnh: $e';
       });
     }
   }
 
   Future<void> _handleSubmit() async {
-    if (!_gpsVerified) {
-      setState(() {
-        _submitError = 'Vui lòng kiểm tra và xác nhận vị trí GPS trước khi điểm danh.';
-      });
-      return;
-    }
-
     if (_photoFile == null) {
       setState(() {
         _submitError = 'Vui lòng chụp ảnh bằng chứng điểm danh trực tiếp từ máy ảnh.';
@@ -183,16 +303,27 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
       _submitError = null;
     });
 
+    if (_currentPosition == null && _hasGpsPermission) {
+      await _fetchCurrentPosition();
+    }
+
     try {
-      await widget.onConfirmCheckIn(_photoFile!);
+      await widget.onConfirmCheckIn(
+        _photoFile!,
+        _currentPosition?.latitude,
+        _currentPosition?.longitude,
+      );
       if (mounted) {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      setState(() {
-        _submitError = e.toString();
-        _isSubmitting = false;
-      });
+      final cleanMsg = e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', '');
+      if (mounted) {
+        setState(() {
+          _submitError = cleanMsg;
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
@@ -244,64 +375,73 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
           ],
           const SizedBox(height: 16),
 
-          // Section 1: GPS Verification
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: _gpsVerified ? AppColors.completedBg : AppColors.background,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _gpsVerified ? AppColors.completedText.withValues(alpha: 0.3) : AppColors.border,
+          // Chỉ hiển thị mục yêu cầu GPS khi ứng dụng chưa có quyền truy cập GPS hoặc GPS bị tắt
+          if (!_hasGpsPermission) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.cancelledBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.cancelledText.withValues(alpha: 0.3)),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      _gpsVerified ? LucideIcons.checkCircle2 : LucideIcons.mapPin,
-                      size: 18,
-                      color: _gpsVerified ? AppColors.completedText : AppColors.primary,
+              child: Row(
+                children: [
+                  const Icon(LucideIcons.mapPinOff, size: 20, color: AppColors.cancelledText),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _gpsPermissionError ?? 'Cần cấp quyền truy cập vị trí (GPS) để điểm danh.',
+                      style: const TextStyle(fontSize: 12, color: AppColors.cancelledText),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _gpsVerified
-                            ? 'Vị trí hợp lệ ${_distanceMeters != null ? '(${_distanceMeters!.toInt()}m)' : ''}'
-                            : 'Xác thực vị trí GPS',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: _gpsVerified ? AppColors.completedText : AppColors.textPrimary,
-                        ),
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _isCheckingGps ? null : _requestGpsPermission,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    OutlinedButton(
-                      onPressed: _isCheckingGps ? null : _verifyGpsLocation,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        _isCheckingGps ? 'Đang kiểm tra...' : (_gpsVerified ? 'Kiểm tra lại' : 'Kiểm tra GPS'),
-                        style: const TextStyle(fontSize: 12),
-                      ),
+                    child: Text(
+                      _isCheckingGps ? 'Đang bật...' : 'Cấp quyền GPS',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                     ),
-                  ],
-                ),
-                if (_gpsError != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    _gpsError!,
-                    style: const TextStyle(fontSize: 12, color: AppColors.cancelledText),
                   ),
                 ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
+          ] else ...[
+            // Đã có quyền vị trí: hiển thị badge nhỏ báo GPS sẵn sàng
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.completedBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.completedText.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(LucideIcons.checkCircle2, size: 14, color: AppColors.completedText),
+                  const SizedBox(width: 6),
+                  Text(
+                    _currentPosition != null
+                        ? 'Vị trí GPS sẵn sàng (${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)})'
+                        : 'GPS sẵn sàng',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.completedText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // Section 2: Photo evidence capture
           const Text(
@@ -340,14 +480,30 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
               ],
             ),
           ] else ...[
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _pickImage(ImageSource.camera),
-                icon: const Icon(LucideIcons.camera, size: 18),
-                label: const Text('Chụp ảnh điểm danh trực tiếp'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+            GestureDetector(
+              onTap: _showImageSourcePickerModal,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Icon(LucideIcons.camera, color: Colors.blue.shade700, size: 28),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Chụp ảnh hoặc chọn ảnh từ thư viện',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Hỗ trợ tải ảnh chụp trực tiếp hoặc ảnh có sẵn từ máy',
+                      style: TextStyle(fontSize: 11, color: Colors.blue.shade700.withValues(alpha: 0.8)),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -355,9 +511,26 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
 
           if (_submitError != null) ...[
             const SizedBox(height: 12),
-            Text(
-              _submitError!,
-              style: const TextStyle(fontSize: 12, color: AppColors.cancelledText),
+            Container(
+              padding: const EdgeInsets.all(10),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppColors.cancelledBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.cancelledText.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(LucideIcons.alertCircle, size: 16, color: AppColors.cancelledText),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _submitError!,
+                      style: const TextStyle(fontSize: 12, color: AppColors.cancelledText, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
           const SizedBox(height: 20),

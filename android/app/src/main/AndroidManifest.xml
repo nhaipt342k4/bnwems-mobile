@@ -5,6 +5,18 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
+    <!-- Camera & ảnh — bắt buộc cho image_picker khi chụp ảnh từ camera điện thoại -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Android 13+ (API 33+): quyền đọc ảnh & video mới -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+    <!-- Android 12 trở xuống: quyền đọc bộ nhớ ngoài -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
+
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+
     <application
         android:label="bnwems_staff_mobile"
         android:name="${applicationName}"

@@ -62,7 +62,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         content: 'Bạn được phân công phụ trách ${plan.taskName} (${plan.orderCode}${plan.eventName != null && plan.eventName!.isNotEmpty ? ' · ${plan.eventName}' : ''}).',
         type: 'ASSIGNMENT',
         isRead: isRead,
-        createdAt: plan.startTime,
+        createdAt: (plan.createdAt != null && plan.createdAt!.isNotEmpty)
+            ? plan.createdAt!
+            : DateTime.now().toIso8601String(),
       );
     }).toList();
 

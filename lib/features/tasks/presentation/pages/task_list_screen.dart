@@ -7,6 +7,7 @@ import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../../../core/widgets/empty_state_widget.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
+import '../../data/services/evidence_api_service.dart';
 import '../providers/task_provider.dart';
 import '../widgets/check_in_modal_bottom_sheet.dart';
 import '../widgets/current_task_card.dart';
@@ -154,8 +155,21 @@ class _TaskListScreenState extends State<TaskListScreen> {
                               context,
                               taskName: plan.taskName,
                               locationName: plan.location,
-                              onConfirmCheckIn: (photoFile) async {
-                                await taskProvider.checkIn(plan.planId, user.id);
+                              targetLatitude: plan.latitude,
+                              targetLongitude: plan.longitude,
+                              onConfirmCheckIn: (photoFile, lat, lng) async {
+                                String? evidenceId;
+                                try {
+                                  final ev = await EvidenceApiService().upload(photoFile);
+                                  evidenceId = ev.evidenceId;
+                                } catch (_) {}
+                                await taskProvider.checkIn(
+                                  plan.planId,
+                                  user.id,
+                                  checkInEvidenceId: evidenceId,
+                                  latitude: lat,
+                                  longitude: lng,
+                                );
                               },
                             );
                           }

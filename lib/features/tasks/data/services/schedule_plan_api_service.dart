@@ -44,9 +44,17 @@ class SchedulePlanApiService {
     return SchedulePlan.fromDtoJson(response);
   }
 
-  Future<SchedulePlan> checkIn(String planId, String userId, {String? checkInEvidenceId}) async {
+  Future<SchedulePlan> checkIn(
+    String planId,
+    String userId, {
+    String? checkInEvidenceId,
+    double? latitude,
+    double? longitude,
+  }) async {
     final body = <String, dynamic>{};
     if (checkInEvidenceId != null) body['checkInEvidenceId'] = checkInEvidenceId;
+    if (latitude != null) body['latitude'] = latitude;
+    if (longitude != null) body['longitude'] = longitude;
 
     final response = await _apiClient.fetchData<Map<String, dynamic>>(
       '/schedule-plans/$planId/assignees/$userId/check-in',
@@ -56,10 +64,20 @@ class SchedulePlanApiService {
     return SchedulePlan.fromDtoJson(response);
   }
 
-  Future<SchedulePlan> checkOut(String planId, String userId) async {
+  Future<SchedulePlan> checkOut(
+    String planId,
+    String userId, {
+    double? latitude,
+    double? longitude,
+  }) async {
+    final body = <String, dynamic>{};
+    if (latitude != null) body['latitude'] = latitude;
+    if (longitude != null) body['longitude'] = longitude;
+
     final response = await _apiClient.fetchData<Map<String, dynamic>>(
       '/schedule-plans/$planId/assignees/$userId/check-out',
       method: 'POST',
+      body: body,
     );
     return SchedulePlan.fromDtoJson(response);
   }

@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
+import '../../../tasks/data/services/evidence_api_service.dart';
 import '../../../tasks/presentation/providers/task_provider.dart';
 import '../../../tasks/presentation/widgets/check_in_modal_bottom_sheet.dart';
 import '../../../tasks/presentation/widgets/current_task_card.dart';
@@ -33,11 +34,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
     final taskProvider = context.watch<TaskProvider>();
-    final todayStr = Formatters.toIsoDateOnly(DateTime.now());
+    final todayStr = Formatters.toIsoDateOnly(Formatters.nowInVietnam());
 
     final todayPlans = taskProvider.myPlans.where((plan) {
       try {
-        final localDate = DateTime.parse(plan.startTime).toLocal();
+        final localDate = Formatters.parseVietnamDateTime(plan.startTime);
         return Formatters.toIsoDateOnly(localDate) == todayStr;
       } catch (_) {
         return plan.startTime.startsWith(todayStr);
@@ -143,11 +144,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       context,
                       taskName: primaryTodayPlan.taskName,
                       locationName: primaryTodayPlan.location,
-                      onConfirmCheckIn: (photoFile) async {
-                        await context.read<TaskProvider>().checkIn(
-                          primaryTodayPlan.planId,
-                          user.id,
-                        );
+                      targetLatitude: primaryTodayPlan.latitude,
+                      targetLongitude: primaryTodayPlan.longitude,
+                      onConfirmCheckIn: (photoFile, lat, lng) async {
+                        String? evidenceId;
+                        try {
+                          final ev = await EvidenceApiService().upload(photoFile);
+                          evidenceId = ev.evidenceId;
+                        } catch (_) {}
+                        if (context.mounted) {
+                          await context.read<TaskProvider>().checkIn(
+                            primaryTodayPlan.planId,
+                            user.id,
+                            checkInEvidenceId: evidenceId,
+                            latitude: lat,
+                            longitude: lng,
+                          );
+                        }
                       },
                     );
                   }
@@ -221,8 +234,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               context,
                               taskName: plan.taskName,
                               locationName: plan.location,
-                              onConfirmCheckIn: (photoFile) async {
-                                await taskProvider.checkIn(plan.planId, user.id);
+                              targetLatitude: plan.latitude,
+                              targetLongitude: plan.longitude,
+                              onConfirmCheckIn: (photoFile, lat, lng) async {
+                                String? evidenceId;
+                                try {
+                                  final ev = await EvidenceApiService().upload(photoFile);
+                                  evidenceId = ev.evidenceId;
+                                } catch (_) {}
+                                await taskProvider.checkIn(
+                                  plan.planId,
+                                  user.id,
+                                  checkInEvidenceId: evidenceId,
+                                  latitude: lat,
+                                  longitude: lng,
+                                );
                               },
                             );
                           }

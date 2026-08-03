@@ -91,9 +91,12 @@ class SchedulePlan {
   final SchedulePlanStatus status;
   final String? evidenceId;
   final String? notes;
+  final double? latitude;
+  final double? longitude;
   final List<SchedulePlanAssignee> assignees;
   final List<WorkTaskItem> items;
   final List<SupplierTransaction> supplierTransactions;
+  final String? createdAt;
 
   SchedulePlan({
     required this.planId,
@@ -110,12 +113,15 @@ class SchedulePlan {
     required this.startTime,
     this.endTime,
     this.location,
+    this.latitude,
+    this.longitude,
     required this.status,
     this.evidenceId,
     this.notes,
     required this.assignees,
     this.items = const [],
     this.supplierTransactions = const [],
+    this.createdAt,
   });
 
   SchedulePlan copyWith({
@@ -124,6 +130,7 @@ class SchedulePlan {
     List<SchedulePlanAssignee>? assignees,
     List<WorkTaskItem>? items,
     List<SupplierTransaction>? supplierTransactions,
+    String? createdAt,
   }) {
     return SchedulePlan(
       planId: planId,
@@ -140,12 +147,15 @@ class SchedulePlan {
       startTime: startTime,
       endTime: endTime,
       location: location,
+      latitude: latitude,
+      longitude: longitude,
       status: status ?? this.status,
       evidenceId: evidenceId ?? this.evidenceId,
       notes: notes,
       assignees: assignees ?? this.assignees,
       items: items ?? this.items,
       supplierTransactions: supplierTransactions ?? this.supplierTransactions,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
@@ -171,10 +181,17 @@ class SchedulePlan {
       startTime: json['startTime']?.toString() ?? '',
       endTime: json['endTime']?.toString(),
       location: json['location']?.toString(),
+      latitude: (json['latitude'] as num?)?.toDouble() ??
+          (json['event']?['latitude'] as num?)?.toDouble() ??
+          (json['order']?['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble() ??
+          (json['event']?['longitude'] as num?)?.toDouble() ??
+          (json['order']?['longitude'] as num?)?.toDouble(),
       status: json['status']?.toString() ?? 'PENDING',
       evidenceId: json['evidenceId']?.toString(),
       notes: json['notes']?.toString(),
       assignees: assignees,
+      createdAt: json['createdAt']?.toString() ?? json['created_at']?.toString(),
     );
   }
 }
