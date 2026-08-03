@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -183,44 +184,53 @@ class _ManagerScheduleScreenState extends State<ManagerScheduleScreen> {
                                 final plan = dayPlans[index];
                                 final isCancelled = plan.status == 'CANCELLED';
 
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: isCancelled ? Colors.white.withValues(alpha: 0.6) : Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: AppColors.borderLight),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: _getStatusBgColor(plan.status),
-                                              borderRadius: BorderRadius.circular(8),
+                                return InkWell(
+                                  onTap: () {
+                                    if (plan.orderId.isNotEmpty) {
+                                      context.push('/manager/orders/${plan.orderId}');
+                                    } else if (plan.planId.isNotEmpty) {
+                                      context.push('/staff/tasks/${plan.planId}');
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: isCancelled ? Colors.white.withValues(alpha: 0.6) : Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: AppColors.borderLight),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: _getStatusBgColor(plan.status),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                Formatters.formatStatus(plan.status),
+                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _getStatusTextColor(plan.status)),
+                                              ),
                                             ),
-                                            child: Text(
-                                              Formatters.formatStatus(plan.status),
-                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _getStatusTextColor(plan.status)),
-                                            ),
-                                          ),
-                                          Text(plan.planCode, style: const TextStyle(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.bold)),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        plan.taskName ?? 'Kế hoạch',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.textPrimary,
-                                          decoration: isCancelled ? TextDecoration.lineThrough : null,
+                                            Text(plan.planCode, style: const TextStyle(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.bold)),
+                                          ],
                                         ),
-                                      ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          plan.taskName ?? 'Kế hoạch',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary,
+                                            decoration: isCancelled ? TextDecoration.lineThrough : null,
+                                          ),
+                                        ),
                                       const SizedBox(height: 2),
                                       Text(
                                         '${plan.eventName ?? plan.orderCode ?? ''} ${plan.customerName != null ? '— ${plan.customerName}' : ''}',
@@ -283,9 +293,10 @@ class _ManagerScheduleScreenState extends State<ManagerScheduleScreen> {
                                           }).toList(),
                                         ),
                                       ],
-                                    ],
-                                  ),
-                                );
+                                     ],
+                                   ),
+                                 ),
+                               );
                               },
                             ),
             ),

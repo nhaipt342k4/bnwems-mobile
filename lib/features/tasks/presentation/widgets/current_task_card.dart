@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_badge.dart';
 import '../../../../core/widgets/app_role_badge.dart';
+import '../../../authentication/presentation/providers/auth_provider.dart';
 import '../../data/models/work_task_models.dart';
 
 class CurrentTaskCard extends StatelessWidget {
@@ -89,21 +91,31 @@ class CurrentTaskCard extends StatelessWidget {
     final canCheckIn = plan.status != 'CANCELLED' && plan.status != 'COMPLETED' && !isCheckedIn;
     final hasOtherActivePlan = activePlan != null && activePlan!.planId != plan.planId;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
+    return InkWell(
+      onTap: () {
+        final user = context.read<AuthProvider>().user;
+        if (user != null && user.isManager && plan.orderId.isNotEmpty) {
+          context.push('/manager/orders/${plan.orderId}');
+        } else {
+          context.push('/staff/tasks/${plan.planId}');
+        }
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderLight),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Row 1: Status Badge (Left) + Plan Code (Right)
@@ -263,6 +275,7 @@ class CurrentTaskCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

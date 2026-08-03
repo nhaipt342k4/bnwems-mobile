@@ -374,6 +374,8 @@ class _SettlementSectionState extends State<SettlementSection> {
                   ),
                   child: Column(
                     children: [
+                      if (widget.orderTotalAmount > 0)
+                        _buildAmountRow('Giá trị đơn gốc', widget.orderTotalAmount),
                       _buildAmountRow('Phụ phí phát sinh', s.additionalFee),
                       _buildAmountRow('Tiền bồi thường hỏng/mất', s.compensation),
                       _buildAmountRow('Giảm giá / Chiết khấu', s.discount, isNegative: true),
