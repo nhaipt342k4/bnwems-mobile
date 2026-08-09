@@ -55,9 +55,22 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
   }
 
   Future<void> _pickPhoto() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85);
-    if (image != null) {
-      setState(() => _photoFile = File(image.path));
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+      if (image != null) {
+        setState(() => _photoFile = File(image.path));
+      }
+    } catch (e) {
+      try {
+        final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+        if (image != null) {
+          setState(() => _photoFile = File(image.path));
+        }
+      } catch (gErr) {
+        if (mounted) {
+          setState(() => _error = 'Không thể mở camera hoặc thư viện ảnh trên thiết bị này.');
+        }
+      }
     }
   }
 

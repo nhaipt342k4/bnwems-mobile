@@ -33,6 +33,7 @@ class SettlementSection extends StatefulWidget {
   final String? eventDate;
   final num orderTotalAmount;
   final num depositCollected;
+  final double suggestedCompensation;
   final Future<void> Function(SettlementSubmitInput input) onSubmitSettlement;
   final Future<void> Function(File photoFile) onMarkPaid;
 
@@ -45,6 +46,7 @@ class SettlementSection extends StatefulWidget {
     this.eventDate,
     this.orderTotalAmount = 0,
     this.depositCollected = 0,
+    this.suggestedCompensation = 0.0,
     required this.onSubmitSettlement,
     required this.onMarkPaid,
   });
@@ -79,10 +81,23 @@ class _SettlementSectionState extends State<SettlementSection> {
       if (s.paymentMethod != null && s.paymentMethod!.isNotEmpty) {
         _paymentMethod = s.paymentMethod == 'cash' ? 'cash' : 'bank_transfer';
       }
+    } else if (widget.suggestedCompensation > 0) {
+      _compensationController.text = widget.suggestedCompensation.toInt().toString();
     }
     _additionalFeeController.addListener(_onAmountChanged);
     _compensationController.addListener(_onAmountChanged);
     _discountController.addListener(_onAmountChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant SettlementSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Khi giá trị đề xuất thay đổi và settlement chưa tồn tại, tự cập nhật ô bồi thường
+    if (widget.existingSettlement == null &&
+        widget.suggestedCompensation != oldWidget.suggestedCompensation &&
+        widget.suggestedCompensation > 0) {
+      _compensationController.text = widget.suggestedCompensation.toInt().toString();
+    }
   }
 
   void _onAmountChanged() {
@@ -124,9 +139,15 @@ class _SettlementSectionState extends State<SettlementSection> {
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
-    final XFile? image = await _picker.pickImage(source: source, imageQuality: 85);
-    if (image != null) {
-      setState(() => _photoFile = File(image.path));
+    try {
+      final XFile? image = await _picker.pickImage(source: source, imageQuality: 85);
+      if (image != null) {
+        setState(() => _photoFile = File(image.path));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Không thể chụp/chọn ảnh từ nguồn này trên thiết bị hiện tại.');
+      }
     }
   }
 
@@ -522,7 +543,25 @@ class _SettlementSectionState extends State<SettlementSection> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Bồi thường hư hỏng/mất', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
+                                Row(
+                                  children: [
+                                    const Text('Bồi thường hư hỏng/mất', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
+                                    if (widget.suggestedCompensation > 0 && widget.existingSettlement == null) ...[
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.shade100,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'Đề xuất',
+                                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                                 const SizedBox(height: 4),
                                 TextField(
                                   controller: _compensationController,
@@ -530,6 +569,14 @@ class _SettlementSectionState extends State<SettlementSection> {
                                   decoration: InputDecoration(
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: widget.suggestedCompensation > 0 && widget.existingSettlement == null
+                                            ? Colors.orange.shade400
+                                            : Colors.grey.shade400,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],

@@ -51,6 +51,7 @@ class WorkTaskItem {
   final int quantity;
   final int? quantityAvailable;
   final String? source; // 'INTERNAL' | 'SUPPLIER'
+  final double rentalPrice;
 
   WorkTaskItem({
     required this.itemId,
@@ -59,6 +60,7 @@ class WorkTaskItem {
     required this.quantity,
     this.quantityAvailable,
     this.source,
+    this.rentalPrice = 0.0,
   });
 
   factory WorkTaskItem.fromJson(Map<String, dynamic> json) {
@@ -69,6 +71,7 @@ class WorkTaskItem {
       quantity: (json['quantityOrdered'] ?? json['quantity'] ?? 0) as int,
       quantityAvailable: (json['quantityAvailable'] as num?)?.toInt(),
       source: json['source']?.toString(),
+      rentalPrice: (json['rentalPrice'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

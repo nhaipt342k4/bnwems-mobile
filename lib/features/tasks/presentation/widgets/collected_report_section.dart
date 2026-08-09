@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../data/models/work_task_models.dart';
 
@@ -22,7 +23,18 @@ class CollectedEquipmentReportSection extends StatefulWidget {
   final CollectedEquipmentReport? existingInternalReport;
   final CollectedEquipmentReport? existingSupplierReport;
   final List<WorkTaskItem> items;
+
+  /// Bước 1: gửi báo cáo thu hồi
   final Future<void> Function(CollectedEquipmentReportSubmitInput input) onSubmit;
+
+  /// Bước 2: xác nhận hoàn kho (null = không có bước này)
+  final Future<void> Function()? onConfirmWarehouse;
+
+  /// Trạng thái hoàn kho đã xác nhận (persistent)
+  final bool isWarehouseConfirmed;
+
+  /// Callback khi giá trị bồi thường thay đổi
+  final void Function(double suggestedCompensation)? onCompensationChanged;
 
   const CollectedEquipmentReportSection({
     super.key,
@@ -30,6 +42,9 @@ class CollectedEquipmentReportSection extends StatefulWidget {
     this.existingSupplierReport,
     required this.items,
     required this.onSubmit,
+    this.onConfirmWarehouse,
+    this.isWarehouseConfirmed = false,
+    this.onCompensationChanged,
   });
 
   @override
@@ -40,8 +55,17 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
   final Map<String, int> _goodQty = {};
   final Map<String, int> _damagedQty = {};
   final Map<String, int> _lostQty = {};
+
   bool _isSubmitting = false;
+  bool _isConfirmingWarehouse = false;
   String? _error;
+
+  // Bước hiện tại: 0 = chưa gửi, 1 = đã gửi báo cáo (chờ hoàn kho), 2 = đã hoàn kho
+  int get _step {
+    if (widget.isWarehouseConfirmed) return 2;
+    if (widget.existingInternalReport != null) return 1;
+    return 0;
+  }
 
   @override
   void initState() {
@@ -53,7 +77,24 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
     }
   }
 
-  Future<void> _handleSubmit(String reportType) async {
+  double get _totalCompensation {
+    double total = 0;
+    for (final item in widget.items) {
+      final damaged = _damagedQty[item.itemId] ?? 0;
+      final lost = _lostQty[item.itemId] ?? 0;
+      total += (damaged + lost) * item.rentalPrice;
+    }
+    return total;
+  }
+
+  void _updateQtyAndNotify(VoidCallback update) {
+    setState(update);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onCompensationChanged?.call(_totalCompensation);
+    });
+  }
+
+  Future<void> _handleSubmitReport() async {
     final reportItems = widget.items.map((item) {
       final id = item.itemId;
       return {
@@ -72,54 +113,239 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
     try {
       await widget.onSubmit(
         CollectedEquipmentReportSubmitInput(
-          reportType: reportType,
+          reportType: 'INTERNAL',
           items: reportItems,
         ),
       );
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isSubmitting = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isSubmitting = false;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _handleConfirmWarehouse() async {
+    setState(() {
+      _isConfirmingWarehouse = true;
+      _error = null;
+    });
+    try {
+      await widget.onConfirmWarehouse?.call();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isConfirmingWarehouse = false;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isConfirmingWarehouse = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final step = _step;
+    final compensation = _totalCompensation;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: step == 2 ? Colors.green.shade50 : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(
+          color: step == 2
+              ? Colors.green.shade300
+              : step == 1
+                  ? Colors.blue.shade200
+                  : AppColors.borderLight,
+          width: step >= 1 ? 1.5 : 1.0,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          // ──── Header ────
+          Row(
             children: [
-              Icon(LucideIcons.packageCheck, size: 18, color: AppColors.primary),
-              SizedBox(width: 8),
-              Text(
-                'Báo cáo kiểm đếm thu hồi thiết bị',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              Icon(
+                step == 2 ? LucideIcons.checkCircle2 : LucideIcons.packageCheck,
+                size: 18,
+                color: step == 2 ? Colors.green.shade700 : AppColors.primary,
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Báo cáo kiểm đếm thu hồi thiết bị',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              // Badge trạng thái
+              if (step == 1)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade600,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(LucideIcons.clipboardCheck, color: Colors.white, size: 12),
+                      SizedBox(width: 4),
+                      Text('Đã gửi báo cáo', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                ),
+              if (step == 2)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade600,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(LucideIcons.checkCircle2, color: Colors.white, size: 12),
+                      SizedBox(width: 4),
+                      Text('Đã hoàn kho', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 12),
 
-          if (widget.existingInternalReport != null) ...[
-            _buildSubmittedReportView('Kho doanh nghiệp (Công ty)', widget.existingInternalReport!),
-          ] else ...[
+          // ──── Bước 2: Đã hoàn kho hoàn toàn ────
+          if (step == 2) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.green.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.warehouse, color: Colors.green.shade700, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Báo cáo thu hồi đã gửi và thiết bị đã được xác nhận hoàn kho thành công.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green.shade800),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (widget.existingInternalReport != null) ...[
+              const SizedBox(height: 10),
+              _buildSubmittedReportView(widget.existingInternalReport!),
+            ],
+          ]
+
+          // ──── Bước 1: Đã gửi báo cáo, chờ xác nhận hoàn kho ────
+          else if (step == 1) ...[
+            // Banner bước hiện tại
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.info, color: Colors.blue.shade700, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Báo cáo kiểm đếm đã được gửi. Nhấn "Xác nhận hoàn kho" để hoàn tất việc trả thiết bị về kho.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.blue.shade800),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (widget.existingInternalReport != null)
+              _buildSubmittedReportView(widget.existingInternalReport!),
+            const SizedBox(height: 12),
+            if (widget.onConfirmWarehouse != null)
+              AppButton(
+                text: 'Xác nhận hoàn kho',
+                isFullWidth: true,
+                isLoading: _isConfirmingWarehouse,
+                onPressed: _handleConfirmWarehouse,
+              ),
+          ]
+
+          // ──── Bước 0: Chưa gửi báo cáo ────
+          else ...[
             const Text('Thiết bị Kho công ty:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            ...widget.items.where((i) => i.source == null || i.source == 'INTERNAL').map((item) => _buildItemRow(item)),
+            ...widget.items
+                .where((i) => i.source == null || i.source == 'INTERNAL')
+                .map((item) => _buildItemRow(item)),
             const SizedBox(height: 12),
+
+            // Banner đề xuất bồi thường
+            if (compensation > 0) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.alertTriangle, color: Colors.orange.shade700, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Đề xuất bồi thường hư hỏng/mất',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            Formatters.formatCurrency(compensation),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.orange.shade900),
+                          ),
+                          Text(
+                            '(Đã tự động điền vào ô Bồi thường ở mục Quyết toán)',
+                            style: TextStyle(fontSize: 10, color: Colors.orange.shade700),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             AppButton(
               text: 'Gửi báo cáo thu hồi Kho công ty',
               isFullWidth: true,
               isLoading: _isSubmitting,
-              onPressed: () => _handleSubmit('INTERNAL'),
+              onPressed: _handleSubmitReport,
             ),
           ],
 
@@ -137,27 +363,57 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
     final good = _goodQty[id] ?? item.quantity;
     final damaged = _damagedQty[id] ?? 0;
     final lost = _lostQty[id] ?? 0;
+    final hasIssue = damaged > 0 || lost > 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: hasIssue ? Colors.orange.shade50 : AppColors.background,
         borderRadius: BorderRadius.circular(10),
+        border: hasIssue ? Border.all(color: Colors.orange.shade200) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${item.name} (${item.quantity} ${item.unit})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  '${item.name} (${item.quantity} ${item.unit})',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+              if (item.rentalPrice > 0)
+                Text(
+                  Formatters.formatCurrency(item.rentalPrice),
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+            ],
+          ),
           const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildQtyPicker('Tốt', good, (val) => setState(() => _goodQty[id] = val), AppColors.completedText),
-              _buildQtyPicker('Hỏng', damaged, (val) => setState(() => _damagedQty[id] = val), AppColors.inProgressText),
-              _buildQtyPicker('Mất', lost, (val) => setState(() => _lostQty[id] = val), AppColors.cancelledText),
+              _buildQtyPicker('Tốt', good,
+                  (val) => _updateQtyAndNotify(() => _goodQty[id] = val),
+                  AppColors.completedText),
+              _buildQtyPicker('Hỏng', damaged,
+                  (val) => _updateQtyAndNotify(() => _damagedQty[id] = val),
+                  AppColors.inProgressText),
+              _buildQtyPicker('Mất', lost,
+                  (val) => _updateQtyAndNotify(() => _lostQty[id] = val),
+                  AppColors.cancelledText),
             ],
           ),
+          if (hasIssue && item.rentalPrice > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Bồi thường: ${damaged + lost} × ${Formatters.formatCurrency(item.rentalPrice)} = ${Formatters.formatCurrency((damaged + lost) * item.rentalPrice)}',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.orange.shade800),
+            ),
+          ],
         ],
       ),
     );
@@ -183,7 +439,7 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
     );
   }
 
-  Widget _buildSubmittedReportView(String title, CollectedEquipmentReport report) {
+  Widget _buildSubmittedReportView(CollectedEquipmentReport report) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -198,10 +454,10 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
             children: [
               const Icon(LucideIcons.checkCircle2, color: AppColors.completedText, size: 16),
               const SizedBox(width: 6),
-              Expanded(
+              const Expanded(
                 child: Text(
-                  'ĐÃ GỬI BÁO CÁO THU HỒI ($title)',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.completedText),
+                  'ĐÃ GỬI BÁO CÁO KIỂM ĐẾM THU HỒI',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.completedText),
                 ),
               ),
             ],

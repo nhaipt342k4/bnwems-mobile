@@ -9,6 +9,7 @@ class TaskProvider extends ChangeNotifier {
   List<SchedulePlan> _myPlans = [];
   final Set<String> _confirmedWarehousePlanIds = {};
   final Set<String> _submittedSurveyPlanIds = {};
+  final Set<String> _submittedHandoverPlanIds = {};
   bool _isLoading = false;
   String? _errorMessage;
   String _selectedStatusFilter = 'ALL';
@@ -17,6 +18,7 @@ class TaskProvider extends ChangeNotifier {
   List<SchedulePlan> get myPlans => _myPlans;
   Set<String> get confirmedWarehousePlanIds => _confirmedWarehousePlanIds;
   Set<String> get submittedSurveyPlanIds => _submittedSurveyPlanIds;
+  Set<String> get submittedHandoverPlanIds => _submittedHandoverPlanIds;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String get selectedStatusFilter => _selectedStatusFilter;
@@ -35,6 +37,9 @@ class TaskProvider extends ChangeNotifier {
 
       final surveyList = prefs.getStringList('submitted_survey_plans') ?? [];
       _submittedSurveyPlanIds.addAll(surveyList);
+
+      final handoverList = prefs.getStringList('submitted_handover_plans') ?? [];
+      _submittedHandoverPlanIds.addAll(handoverList);
       notifyListeners();
     } catch (_) {}
   }
@@ -53,6 +58,13 @@ class TaskProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
+  Future<void> _saveSubmittedHandoverState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('submitted_handover_plans', _submittedHandoverPlanIds.toList());
+    } catch (_) {}
+  }
+
   bool isWarehouseConfirmed(String planId) {
     return _confirmedWarehousePlanIds.contains(planId);
   }
@@ -64,6 +76,16 @@ class TaskProvider extends ChangeNotifier {
   void markSurveySubmitted(String planId) {
     _submittedSurveyPlanIds.add(planId);
     _saveSubmittedSurveyState();
+    notifyListeners();
+  }
+
+  bool isHandoverSubmitted(String planId) {
+    return _submittedHandoverPlanIds.contains(planId);
+  }
+
+  void markHandoverSubmitted(String planId) {
+    _submittedHandoverPlanIds.add(planId);
+    _saveSubmittedHandoverState();
     notifyListeners();
   }
 

@@ -32,7 +32,7 @@ class EvidenceApiService {
       : _apiClient = apiClient ?? ApiClient();
 
   Future<EvidenceDto> upload(File file, {String? description}) async {
-    final fileName = file.path.split('/').last;
+    final fileName = file.path.split(RegExp(r'[/\\]')).last;
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(file.path, filename: fileName),
       if (description != null) 'description': description,

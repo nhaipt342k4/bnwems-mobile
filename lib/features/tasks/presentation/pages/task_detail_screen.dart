@@ -57,6 +57,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
   CollectedEquipmentReport? _supplierCollectedReport;
   Settlement? _settlement;
   num _depositCollected = 0;
+  double _suggestedCompensation = 0.0;
   bool _isWarehouseConfirmed = false;
   bool _isLoadingSubData = false;
   bool _isConfirming = false;
@@ -406,13 +407,21 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
 
                 const SizedBox(height: 16),
                 HandoverSection(
+                  existingNotes: plan.notes,
+                  isAlreadySubmitted: taskProvider.isHandoverSubmitted(plan.planId),
                   onSubmit: (note, photoFiles) async {
+                    String? lastEvidenceId;
                     for (final photo in photoFiles) {
-                      try {
-                        final ev = await _evidenceService.upload(photo);
-                        await taskProvider.patchEvidence(plan.planId, ev.evidenceId);
-                      } catch (_) {}
+                      final ev = await _evidenceService.upload(
+                        photo,
+                        description: note.isNotEmpty ? note : null,
+                      );
+                      lastEvidenceId = ev.evidenceId;
                     }
+                    if (lastEvidenceId != null) {
+                      await taskProvider.patchEvidence(plan.planId, lastEvidenceId);
+                    }
+                    taskProvider.markHandoverSubmitted(plan.planId);
                     await _loadData();
                   },
                 ),
@@ -425,6 +434,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   existingInternalReport: _internalCollectedReport,
                   existingSupplierReport: _supplierCollectedReport,
                   items: _items,
+                  isWarehouseConfirmed: taskProvider.isWarehouseConfirmed(plan.planId),
+                  onCompensationChanged: (suggested) {
+                    if (mounted && _suggestedCompensation != suggested) {
+                      setState(() => _suggestedCompensation = suggested);
+                    }
+                  },
                   onSubmit: (input) async {
                     await _collectedService.create(
                       plan.orderId,
@@ -437,6 +452,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     );
                     await _loadData();
                   },
+                  onConfirmWarehouse: () async {
+                    final movementItems = _items.map((i) => {
+                      'itemId': i.itemId,
+                      'quantity': i.quantity,
+                    }).toList();
+                    await taskProvider.warehouseMovement(plan.planId, movementItems);
+                    await _loadData();
+                  },
                 ),
                 const SizedBox(height: 16),
                 SettlementSection(
@@ -446,6 +469,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   customerName: plan.customerName,
                   eventDate: plan.startTime,
                   depositCollected: _depositCollected,
+                  suggestedCompensation: _suggestedCompensation,
                   onSubmitSettlement: (input) async {
                     String? evId;
                     if (input.photoFile != null) {

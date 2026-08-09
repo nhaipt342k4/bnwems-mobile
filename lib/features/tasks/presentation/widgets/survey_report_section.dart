@@ -197,22 +197,38 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
   }
 
   Future<void> _pickFromCamera() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85);
-    if (image != null) {
-      setState(() {
-        _photoFiles.add(File(image.path));
-        _error = null;
-      });
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+      if (image != null) {
+        setState(() {
+          _photoFiles.add(File(image.path));
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Không thể mở camera trên thiết bị/nền tảng này. Vui lòng chọn ảnh từ thư viện.';
+        });
+      }
     }
   }
 
   Future<void> _pickFromGallery() async {
-    final List<XFile> images = await _picker.pickMultiImage(imageQuality: 85);
-    if (images.isNotEmpty) {
-      setState(() {
-        _photoFiles.addAll(images.map((img) => File(img.path)));
-        _error = null;
-      });
+    try {
+      final List<XFile> images = await _picker.pickMultiImage(imageQuality: 85);
+      if (images.isNotEmpty) {
+        setState(() {
+          _photoFiles.addAll(images.map((img) => File(img.path)));
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Không thể chọn ảnh từ thư viện: ${e.toString().replaceAll('Exception: ', '')}';
+        });
+      }
     }
   }
 
