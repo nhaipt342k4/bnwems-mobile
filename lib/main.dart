@@ -17,7 +17,6 @@ import './features/manager/presentation/providers/manager_change_requests_provid
 import './features/manager/presentation/providers/manager_dashboard_provider.dart';
 import './features/manager/presentation/providers/manager_deposit_provider.dart';
 import './features/manager/presentation/providers/manager_order_detail_provider.dart';
-import './features/manager/presentation/providers/manager_plan_detail_provider.dart';
 import './features/manager/presentation/providers/manager_order_list_provider.dart';
 import './features/manager/presentation/providers/manager_pending_provider.dart';
 import './features/manager/presentation/providers/manager_return_report_detail_provider.dart';
@@ -63,7 +62,6 @@ class BnwemsStaffApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ManagerScheduleProvider()),
         ChangeNotifierProvider(create: (_) => ManagerReturnReportsProvider()),
         ChangeNotifierProvider(create: (_) => ManagerReturnReportDetailProvider()),
-        ChangeNotifierProvider(create: (_) => ManagerPlanDetailProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {

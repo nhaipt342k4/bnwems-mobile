@@ -1,35 +1,169 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../data/models/manager_schedule_plan.dart';
-import '../../data/models/deposit.dart';
-import '../../data/models/settlement.dart';
-import '../../data/models/collected_equipment_report.dart';
+import '../../../tasks/data/models/work_task_models.dart';
+import '../../../tasks/data/services/collected_report_api_service.dart';
+import '../../../tasks/data/services/deposit_api_service.dart';
+import '../../../tasks/data/services/evidence_api_service.dart';
+import '../../../tasks/data/services/inventory_api_service.dart';
+import '../../../tasks/data/services/schedule_plan_api_service.dart';
+import '../../../tasks/data/services/settlement_api_service.dart';
+import '../../../tasks/data/services/supplier_transaction_api_service.dart';
+import '../../../tasks/data/services/survey_report_api_service.dart';
+import '../../../tasks/presentation/widgets/equipment_table.dart';
+import '../../../tasks/presentation/widgets/field_payment_section.dart';
+import '../../../tasks/presentation/widgets/supplier_transaction_section.dart';
+import '../../../tasks/presentation/widgets/survey_report_section.dart';
 import '../../data/models/change_request.dart';
-import '../providers/manager_plan_detail_provider.dart';
+import '../../data/services/manager_change_request_service.dart';
+import '../../data/services/manager_deposit_service.dart';
+import '../../data/services/manager_inventory_service.dart';
+import '../../data/services/manager_survey_service.dart';
 
-/// Manager tap 1 công việc trên lịch → xem báo cáo staff đã nhập cho đơn của công việc đó + DUYỆT tại chỗ.
+/// Manager tap 1 công việc trên lịch → xem ĐÚNG báo cáo Leader Staff đã nhập cho công việc đó (theo taskCode:
+/// khảo sát / lắp đặt / thu hồi) + duyệt các mục cần xử lý. Hiển thị đọc-lại bằng chính các section của staff.
 class ManagerPlanDetailScreen extends StatefulWidget {
   final String planId;
-  const ManagerPlanDetailScreen({super.key, required this.planId});
+  // Cho phép inject để preview/test — mặc định dùng service thật.
+  final SchedulePlanApiService? planApi;
+  final SurveyReportApiService? surveyApi;
+  final DepositApiService? depositApi;
+  final EvidenceApiService? evidenceApi;
+  const ManagerPlanDetailScreen({super.key, required this.planId, this.planApi, this.surveyApi, this.depositApi, this.evidenceApi});
 
   @override
   State<ManagerPlanDetailScreen> createState() => _ManagerPlanDetailScreenState();
 }
 
 class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
+  // Staff services (đọc dữ liệu Leader đã nhập) — manager có quyền gọi.
+  late final _planService = widget.planApi ?? SchedulePlanApiService();
+  final _inventoryService = InventoryApiService();
+  final _supplierService = SupplierTransactionApiService();
+  late final _surveyService = widget.surveyApi ?? SurveyReportApiService();
+  late final _depositService = widget.depositApi ?? DepositApiService();
+  final _collectedService = CollectedReportApiService();
+  final _settlementService = SettlementApiService();
+  late final _evidenceService = widget.evidenceApi ?? EvidenceApiService();
+  // Manager services (duyệt/xác nhận theo id).
+  final _mgrSurvey = ManagerSurveyService();
+  final _mgrInventory = ManagerInventoryService();
+  final _mgrChange = ManagerChangeRequestService();
+  final _mgrDeposit = ManagerDepositService();
+
+  bool _loading = true;
+  String? _error;
+  SchedulePlan? _plan;
+
+  List<WorkTaskItem> _items = [];
+  List<SupplierTransaction> _supplierTxs = [];
+  SurveyReport? _surveyReport;
+  String? _surveyId;
+  String? _surveyStatus;
+  FieldPaymentRecord? _fieldPayment;
+  String? _depositId;
+  String? _depositStatus;
+  CollectedEquipmentReport? _internalCollected;
+  CollectedEquipmentReport? _supplierCollected;
+  Settlement? _settlement;
+  List<ChangeRequest> _changeRequests = [];
+
+  String? _busyId;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ManagerPlanDetailProvider>().load(widget.planId);
-    });
+    _loadData();
   }
 
-  // (bg, fg) theo nhóm màu trạng thái.
+  Future<void> _loadData() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final plan = await _planService.getById(widget.planId);
+      _plan = plan;
+      final code = plan.taskCode;
+      final orderId = plan.orderId;
+      final futures = <Future<void>>[];
+
+      if (code == 'SETUP' || code == 'COLLECT') {
+        futures.add(_inventoryService.getPicklist(orderId).then((v) => _items = v).catchError((_) => <WorkTaskItem>[]).then((_) {}));
+        futures.add(_supplierService.listWithItems(orderId).then((v) => _supplierTxs = v).catchError((_) => <SupplierTransaction>[]).then((_) {}));
+      }
+      if (code == 'SETUP') {
+        futures.add(_mgrChange.getChangeRequests(orderId: orderId).then((v) => _changeRequests = v).catchError((_) => <ChangeRequest>[]).then((_) {}));
+      }
+      if (code == 'SURVEY') {
+        futures.add(_surveyService.listByPlanId(plan.planId).then((rows) async {
+          if (rows.isNotEmpty) {
+            final dto = rows.first;
+            _surveyId = dto['surveyId']?.toString();
+            _surveyStatus = dto['status']?.toString();
+            String url = '';
+            if (dto['evidenceId'] != null) {
+              try {
+                url = (await _evidenceService.getById(dto['evidenceId'].toString())).fileUrl;
+              } catch (_) {}
+            }
+            _surveyReport = SurveyReport.fromJson(dto, evidencePhotoUrl: url);
+          }
+        }).catchError((_) {}));
+        futures.add(_depositService.list(orderId).then((deps) async {
+          if (deps.isNotEmpty) {
+            final d = deps.first;
+            _depositId = d['depositId']?.toString();
+            _depositStatus = d['status']?.toString();
+            String url = '';
+            if (d['evidenceId'] != null) {
+              try {
+                url = (await _evidenceService.getById(d['evidenceId'].toString())).fileUrl;
+              } catch (_) {}
+            }
+            _fieldPayment = FieldPaymentRecord.fromJson(d, evidencePhotoUrl: url.isEmpty ? null : url);
+          }
+        }).catchError((_) {}));
+      }
+      if (code == 'COLLECT') {
+        futures.add(_collectedService.listByOrderId(orderId).then((reports) {
+          _internalCollected = reports.cast<CollectedEquipmentReport?>().firstWhere((r) => r?.reportType == 'INTERNAL', orElse: () => null);
+          _supplierCollected = reports.cast<CollectedEquipmentReport?>().firstWhere((r) => r?.reportType == 'SUPPLIER', orElse: () => null);
+        }).catchError((_) {}));
+        futures.add(_settlementService.getByOrderId(orderId).then((s) => _settlement = s).catchError((_) => null).then((_) {}));
+      }
+
+      await Future.wait(futures);
+      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString().replaceAll('Exception: ', '');
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _confirm(String id, Future<void> Function() action, String okMsg) async {
+    setState(() => _busyId = id);
+    try {
+      await action();
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(okMsg), backgroundColor: AppColors.completedText));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red.shade700));
+      }
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
   ({Color bg, Color fg}) _tone(String kind) {
     switch (kind) {
       case 'ok':
@@ -38,28 +172,14 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
         return (bg: AppColors.inProgressBg, fg: AppColors.inProgressText);
       case 'danger':
         return (bg: AppColors.cancelledBg, fg: AppColors.cancelledText);
-      case 'info':
-        return (bg: AppColors.confirmedBg, fg: AppColors.confirmedText);
       default:
-        return (bg: AppColors.pendingBg, fg: AppColors.pendingText);
+        return (bg: AppColors.confirmedBg, fg: AppColors.confirmedText);
     }
-  }
-
-  Future<void> _act(Future<bool> Function() action, String successMsg) async {
-    final ok = await action();
-    if (!mounted) return;
-    final err = context.read<ManagerPlanDetailProvider>().actionError;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(ok ? successMsg : (err ?? 'Thao tác thất bại')),
-      backgroundColor: ok ? AppColors.completedText : Colors.red.shade700,
-    ));
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ManagerPlanDetailProvider>();
-    final plan = provider.plan;
-
+    final plan = _plan;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -68,30 +188,20 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
         leading: IconButton(icon: const Icon(LucideIcons.chevronLeft), onPressed: () => context.pop()),
         title: Text(plan?.taskName ?? 'Chi tiết công việc', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
       ),
-      body: provider.isLoading
+      body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : provider.errorMessage != null
-              ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(provider.errorMessage!, style: TextStyle(color: Colors.red.shade700))))
+          : _error != null
+              ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_error!, style: TextStyle(color: Colors.red.shade700))))
               : plan == null
                   ? const Center(child: Text('Không tìm thấy công việc.'))
                   : RefreshIndicator(
-                      onRefresh: () => provider.load(widget.planId),
+                      onRefresh: _loadData,
                       child: ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
                           _planHeader(plan),
-                          const SizedBox(height: 20),
-                          _depositsSection(provider),
-                          _settlementSection(provider, plan),
-                          _returnsSection(provider),
-                          _changeRequestsSection(provider),
-                          const SizedBox(height: 8),
-                          Center(
-                            child: Text(
-                              'Báo cáo khảo sát & biên bản bàn giao sẽ bổ sung sau',
-                              style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontStyle: FontStyle.italic),
-                            ),
-                          ),
+                          const SizedBox(height: 18),
+                          ..._sectionsForTask(plan.taskCode),
                           const SizedBox(height: 24),
                         ],
                       ),
@@ -99,124 +209,127 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
     );
   }
 
-  // ---------------- Header ----------------
-  Widget _planHeader(ManagerSchedulePlan plan) {
-    final tone = _tone(_statusKind(plan.status));
-    final loc = plan.location ?? plan.orderLocation;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(plan.planCode, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
-              _pill(Formatters.formatStatus(plan.status), tone.bg, tone.fg),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(plan.taskName ?? 'Kế hoạch', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+  List<Widget> _sectionsForTask(String code) {
+    switch (code) {
+      case 'SURVEY':
+        return _surveySections();
+      case 'SETUP':
+        return _setupSections();
+      case 'COLLECT':
+        return _collectSections();
+      default:
+        return [_emptyHint('Loại công việc này chưa có báo cáo hiển thị.')];
+    }
+  }
+
+  // ---------------- SURVEY ----------------
+  List<Widget> _surveySections() {
+    final canConfirmSurvey = _surveyId != null && (_surveyStatus == 'SUBMITTED' || _surveyStatus == 'NEEDS_REVIEW');
+    return [
+      _sectionTitle(LucideIcons.clipboardList, 'Báo cáo khảo sát hiện trường'),
+      if (_surveyReport != null) ...[
+        SurveyReportSection(existingReport: _surveyReport, onSubmit: (_) async {}),
+        if (canConfirmSurvey) ...[
           const SizedBox(height: 10),
-          _infoRow(LucideIcons.hash, '${plan.orderCode ?? ''}${plan.eventName != null && plan.eventName!.isNotEmpty ? ' · ${plan.eventName}' : ''}', color: AppColors.primary, bold: true),
-          if (plan.customerName != null && plan.customerName!.isNotEmpty) ...[const SizedBox(height: 6), _infoRow(LucideIcons.user, plan.customerName!)],
-          const SizedBox(height: 6),
-          _infoRow(LucideIcons.clock, '${Formatters.formatDate(plan.startTime)} · ${Formatters.formatTime(plan.startTime)}${plan.endTime != null ? ' - ${Formatters.formatTime(plan.endTime)}' : ''}'),
-          if (loc != null && loc.isNotEmpty) ...[const SizedBox(height: 6), _infoRow(LucideIcons.mapPin, loc)],
-          if (plan.assignees != null && plan.assignees!.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(height: 1, color: AppColors.borderLight),
-            const SizedBox(height: 10),
-            const Text('Nhân sự phụ trách', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
-            const SizedBox(height: 8),
-            ...plan.assignees!.map((a) {
-              final isLead = a.role == 'LEAD';
-              final checkedIn = a.checkInAt != null && a.checkInAt!.isNotEmpty;
-              final checkedOut = a.checkOutAt != null && a.checkOutAt!.isNotEmpty;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  children: [
-                    Icon(isLead ? LucideIcons.userCheck : LucideIcons.user, size: 14, color: isLead ? AppColors.leaderPurple : Colors.blue.shade700),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text('${a.fullName}${isLead ? ' · Trưởng nhóm' : ''}', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary))),
-                    if (checkedOut)
-                      _pill('Đã check-out', _tone('ok').bg, _tone('ok').fg)
-                    else if (checkedIn)
-                      _pill('Đã check-in', _tone('info').bg, _tone('info').fg)
-                    else
-                      _pill('Chưa check-in', _tone('neutral').bg, _tone('neutral').fg),
-                  ],
-                ),
-              );
-            }),
-          ],
+          _primary(_surveyId!, LucideIcons.checkCircle2, 'Xác nhận khảo sát', () => _confirm(_surveyId!, () => _mgrSurvey.confirmSurvey(_surveyId!), 'Đã xác nhận khảo sát')),
         ],
-      ),
-    );
+      ] else
+        _emptyHint('Leader chưa nộp báo cáo khảo sát.'),
+      const SizedBox(height: 20),
+      _sectionTitle(LucideIcons.wallet, 'Cọc thu tại hiện trường'),
+      if (_fieldPayment != null) ...[
+        FieldPaymentSection(existingPayment: _fieldPayment, onSubmit: (_) async {}),
+        if (_depositId != null && _depositStatus == 'UNPAID') ...[
+          const SizedBox(height: 10),
+          _primary(_depositId!, LucideIcons.checkCircle2, 'Xác nhận đã thu cọc', () => _confirm(_depositId!, () => _mgrDeposit.updateDepositStatus(_depositId!, status: 'PAID'), 'Đã xác nhận thu cọc')),
+        ],
+      ] else
+        _emptyHint('Chưa ghi nhận cọc hiện trường.'),
+    ];
   }
 
-  // ---------------- Cọc ----------------
-  Widget _depositsSection(ManagerPlanDetailProvider p) {
-    if (p.deposits.isEmpty) return const SizedBox.shrink();
-    return _section(LucideIcons.wallet, 'Đặt cọc (staff ghi nhận)', p.deposits.length, [
-      for (final d in p.deposits) _depositCard(p, d),
-    ]);
+  // ---------------- SETUP ----------------
+  List<Widget> _setupSections() {
+    return [
+      _sectionTitle(LucideIcons.packageOpen, 'Thiết bị xuất kho'),
+      if (_items.isNotEmpty) EquipmentTable(items: _items) else _emptyHint('Chưa có dữ liệu thiết bị.'),
+      if (_supplierTxs.isNotEmpty) ...[
+        const SizedBox(height: 20),
+        _sectionTitle(LucideIcons.truck, 'Thiết bị thuê nhà cung cấp'),
+        SupplierTransactionSection(transactions: _supplierTxs, onReceiveItem: (_, _, _) async {}, readOnly: true),
+      ],
+      if (_changeRequests.isNotEmpty) ...[
+        const SizedBox(height: 20),
+        _sectionTitle(LucideIcons.repeat, 'Yêu cầu đổi thiết bị'),
+        ..._changeRequests.map(_changeCard),
+      ],
+      const SizedBox(height: 16),
+      _emptyHint('Biên bản bàn giao (ảnh) sẽ bổ sung sau.'),
+    ];
   }
 
-  Widget _depositCard(ManagerPlanDetailProvider p, Deposit d) {
-    final isUnpaid = d.status == 'UNPAID';
-    final tone = _tone(isUnpaid ? 'warn' : (d.status == 'PAID' ? 'ok' : 'danger'));
-    final label = d.status == 'UNPAID' ? 'Chờ xác nhận' : (d.status == 'PAID' ? 'Đã thu' : 'Đã hủy');
+  // ---------------- COLLECT ----------------
+  List<Widget> _collectSections() {
+    return [
+      _sectionTitle(LucideIcons.packageOpen, 'Thiết bị thu hồi'),
+      if (_items.isNotEmpty) EquipmentTable(items: _items) else _emptyHint('Chưa có dữ liệu thiết bị.'),
+      const SizedBox(height: 20),
+      _sectionTitle(LucideIcons.clipboardCheck, 'Báo cáo kiểm đếm thu hồi'),
+      if (_internalCollected != null) _collectedCard(_internalCollected!, 'Kho công ty') else _emptyHint('Leader chưa nộp báo cáo thu hồi kho công ty.'),
+      if (_supplierCollected != null) _collectedCard(_supplierCollected!, 'Thiết bị NCC'),
+      const SizedBox(height: 20),
+      _sectionTitle(LucideIcons.receipt, 'Quyết toán'),
+      _settlementCard(),
+    ];
+  }
+
+  Widget _collectedCard(CollectedEquipmentReport r, String label) {
+    final isSubmitted = r.status == 'SUBMITTED';
+    final tone = _tone(isSubmitted ? 'warn' : 'ok');
+    final good = r.items.fold<int>(0, (s, i) => s + i.goodQuantity);
+    final damaged = r.items.fold<int>(0, (s, i) => s + i.damagedQuantity);
+    final lost = r.items.fold<int>(0, (s, i) => s + i.lostQuantity);
     return _card([
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(Formatters.formatCurrency(d.amount), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          _pill(label, tone.bg, tone.fg),
-        ],
-      ),
-      if (d.paymentMethod != null) ...[const SizedBox(height: 4), _infoRow(LucideIcons.creditCard, _methodLabel(d.paymentMethod))],
-      if (d.notes != null && d.notes!.isNotEmpty) ...[const SizedBox(height: 4), _infoRow(LucideIcons.stickyNote, d.notes!)],
-      if (isUnpaid) ...[
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        _pill(isSubmitted ? 'Chờ xác nhận' : 'Đã hoàn kho', tone.bg, tone.fg),
+      ]),
+      const SizedBox(height: 8),
+      ...r.items.map((it) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(children: [
+              Expanded(child: Text(it.name, style: const TextStyle(fontSize: 12.5, color: AppColors.textPrimary))),
+              _tag('Tốt ${it.goodQuantity}', _tone('ok')),
+              const SizedBox(width: 4),
+              _tag('Hỏng ${it.damagedQuantity}', _tone('warn')),
+              const SizedBox(width: 4),
+              _tag('Mất ${it.lostQuantity}', _tone('danger')),
+            ]),
+          )),
+      const SizedBox(height: 4),
+      Text('Tổng: tốt $good · hỏng $damaged · mất $lost', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+      if (isSubmitted) ...[
         const SizedBox(height: 10),
-        _primaryAction(p, d.depositId, LucideIcons.checkCircle2, 'Xác nhận đã thu cọc',
-            () => _act(() => p.confirmDeposit(d.depositId), 'Đã xác nhận thu cọc')),
+        _primary(r.reportId, LucideIcons.checkCircle2, 'Xác nhận hoàn kho', () => _confirm(r.reportId, () => _mgrInventory.confirmReturnReport(r.reportId), 'Đã xác nhận hoàn kho')),
       ],
     ]);
   }
 
-  // ---------------- Quyết toán ----------------
-  Widget _settlementSection(ManagerPlanDetailProvider p, ManagerSchedulePlan plan) {
-    final s = p.settlement;
-    return _section(LucideIcons.receipt, 'Quyết toán', s == null ? 0 : 1, [
-      if (s == null)
-        _card([
-          const Text('Chưa có biên bản quyết toán.', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
-          const SizedBox(height: 10),
-          _secondaryAction(LucideIcons.arrowRight, 'Mở màn quyết toán', () => context.push('/manager/settlements/${plan.orderId}')),
-        ])
-      else
-        _settlementCard(s, plan),
-    ]);
-  }
-
-  Widget _settlementCard(Settlement s, ManagerSchedulePlan plan) {
+  Widget _settlementCard() {
+    final s = _settlement;
+    if (s == null) {
+      return _card([
+        const Text('Chưa có biên bản quyết toán.', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+        const SizedBox(height: 10),
+        _secondary(LucideIcons.arrowRight, 'Mở màn quyết toán', () => context.push('/manager/settlements/${_plan!.orderId}')),
+      ]);
+    }
     final isPaid = s.status == 'PAID';
-    final tone = _tone(isPaid ? 'ok' : 'warn');
     return _card([
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('Tổng quyết toán', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-          _pill(isPaid ? 'Đã quyết toán' : 'Chờ xác nhận', tone.bg, tone.fg),
-        ],
-      ),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        const Text('Tổng quyết toán', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        _pill(isPaid ? 'Đã quyết toán' : 'Chờ xác nhận', _tone(isPaid ? 'ok' : 'warn').bg, _tone(isPaid ? 'ok' : 'warn').fg),
+      ]),
       const SizedBox(height: 4),
       Text(Formatters.formatCurrency(s.finalAmount), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
       const SizedBox(height: 8),
@@ -224,100 +337,35 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
       _kv('Bồi thường hỏng/mất', Formatters.formatCurrency(s.compensation)),
       _kv('Giảm trừ', '- ${Formatters.formatCurrency(s.discount)}'),
       const SizedBox(height: 10),
-      _secondaryAction(LucideIcons.arrowRight, isPaid ? 'Xem chi tiết quyết toán' : 'Mở để xác nhận thu nốt',
-          () => context.push('/manager/settlements/${plan.orderId}')),
+      _secondary(LucideIcons.arrowRight, isPaid ? 'Xem chi tiết quyết toán' : 'Mở để xác nhận thu nốt', () => context.push('/manager/settlements/${_plan!.orderId}')),
     ]);
   }
 
-  // ---------------- Thu hồi ----------------
-  Widget _returnsSection(ManagerPlanDetailProvider p) {
-    if (p.returnReports.isEmpty) return const SizedBox.shrink();
-    return _section(LucideIcons.packageCheck, 'Thu hồi & hoàn kho', p.returnReports.length, [
-      for (final r in p.returnReports) _returnCard(p, r),
-    ]);
-  }
-
-  Widget _returnCard(ManagerPlanDetailProvider p, CollectedEquipmentReport r) {
-    final isSubmitted = r.status == 'SUBMITTED';
-    final tone = _tone(isSubmitted ? 'warn' : 'ok');
-    final good = r.items.fold<int>(0, (s, i) => s + i.goodQuantity);
-    final damaged = r.items.fold<int>(0, (s, i) => s + i.damagedQuantity);
-    final lost = r.items.fold<int>(0, (s, i) => s + i.lostQuantity);
-    return _card([
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(r.reportType == 'SUPPLIER' ? 'Thiết bị thuê NCC' : 'Kho công ty', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          _pill(isSubmitted ? 'Chờ xác nhận' : 'Đã hoàn kho', tone.bg, tone.fg),
-        ],
-      ),
-      const SizedBox(height: 8),
-      Row(children: [
-        _tag('Tốt $good', _tone('ok')),
-        const SizedBox(width: 6),
-        _tag('Hỏng $damaged', _tone('warn')),
-        const SizedBox(width: 6),
-        _tag('Mất $lost', _tone('danger')),
-      ]),
-      const SizedBox(height: 6),
-      _infoRow(LucideIcons.user, 'Người nộp: ${r.reportedBy.fullName}'),
-      if (isSubmitted) ...[
-        const SizedBox(height: 10),
-        _primaryAction(p, r.reportId, LucideIcons.checkCircle2, 'Xác nhận hoàn kho',
-            () => _act(() => p.confirmReturn(r.reportId), 'Đã xác nhận hoàn kho')),
-      ],
-    ]);
-  }
-
-  // ---------------- Đổi thiết bị ----------------
-  Widget _changeRequestsSection(ManagerPlanDetailProvider p) {
-    if (p.changeRequests.isEmpty) return const SizedBox.shrink();
-    return _section(LucideIcons.repeat, 'Yêu cầu đổi thiết bị', p.changeRequests.length, [
-      for (final c in p.changeRequests) _changeCard(p, c),
-    ]);
-  }
-
-  Widget _changeCard(ManagerPlanDetailProvider p, ChangeRequest c) {
+  Widget _changeCard(ChangeRequest c) {
     final isPending = c.status == 'pending';
     final tone = _tone(isPending ? 'warn' : (c.status == 'approved' ? 'ok' : 'danger'));
     final label = isPending ? 'Chờ duyệt' : (c.status == 'approved' ? 'Đã duyệt' : 'Từ chối');
     return _card([
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(_changeTypeLabel(c.type), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          _pill(label, tone.bg, tone.fg),
-        ],
-      ),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(_changeType(c.type), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        _pill(label, tone.bg, tone.fg),
+      ]),
       const SizedBox(height: 6),
-      ...c.items.map((it) => Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Text(
-              '${it.action == 'add' ? '+ Thêm' : '- Bớt'} ${it.itemName} × ${it.quantity}',
-              style: TextStyle(fontSize: 12.5, color: it.action == 'add' ? AppColors.completedText : AppColors.cancelledText),
-            ),
-          )),
+      ...c.items.map((it) => Text('${it.action == 'add' ? '+ Thêm' : '- Bớt'} ${it.itemName} × ${it.quantity}',
+          style: TextStyle(fontSize: 12.5, color: it.action == 'add' ? AppColors.completedText : AppColors.cancelledText))),
       const SizedBox(height: 4),
       Text('${c.amount >= 0 ? '+' : ''}${Formatters.formatCurrency(c.amount)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
       if (isPending) ...[
         const SizedBox(height: 10),
         Row(children: [
-          Expanded(
-            child: _primaryAction(p, c.changeRequestId, LucideIcons.check, 'Duyệt',
-                () => _act(() => p.decideChangeRequest(c.changeRequestId, 'approved'), 'Đã duyệt yêu cầu')),
-          ),
+          Expanded(child: _primary(c.changeRequestId, LucideIcons.check, 'Duyệt', () => _confirm(c.changeRequestId, () => _mgrChange.approveChangeRequest(c.changeRequestId, 'approved'), 'Đã duyệt yêu cầu'))),
           const SizedBox(width: 8),
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: p.busyId == c.changeRequestId ? null : () => _act(() => p.decideChangeRequest(c.changeRequestId, 'rejected'), 'Đã từ chối yêu cầu'),
+              onPressed: _busyId == c.changeRequestId ? null : () => _confirm(c.changeRequestId, () => _mgrChange.approveChangeRequest(c.changeRequestId, 'rejected'), 'Đã từ chối yêu cầu'),
               icon: const Icon(LucideIcons.x, size: 15),
               label: const Text('Từ chối'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.cancelledText,
-                side: BorderSide(color: AppColors.cancelledText.withValues(alpha: 0.4)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
+              style: OutlinedButton.styleFrom(foregroundColor: AppColors.cancelledText, side: BorderSide(color: AppColors.cancelledText.withValues(alpha: 0.4)), padding: const EdgeInsets.symmetric(vertical: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
             ),
           ),
         ]),
@@ -325,30 +373,70 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
     ]);
   }
 
-  // ---------------- Building blocks ----------------
-  Widget _section(IconData icon, String title, int count, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 10),
-          child: Row(children: [
-            Icon(icon, size: 16, color: AppColors.primary),
-            const SizedBox(width: 8),
-            Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            if (count > 0) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(999)),
-                child: Text('$count', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
-              ),
-            ],
-          ]),
-        ),
-        ...children,
-        const SizedBox(height: 16),
-      ],
+  // ---------------- Header + building blocks ----------------
+  Widget _planHeader(SchedulePlan plan) {
+    final loc = plan.location;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.borderLight)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(plan.planCode, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
+          _pill(Formatters.formatStatus(plan.status), AppColors.primaryLight, AppColors.primaryDark),
+        ]),
+        const SizedBox(height: 6),
+        Text(plan.taskName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        const SizedBox(height: 10),
+        _info(LucideIcons.hash, '${plan.orderCode}${plan.eventName != null && plan.eventName!.isNotEmpty ? ' · ${plan.eventName}' : ''}', color: AppColors.primary, bold: true),
+        if (plan.customerName.isNotEmpty) ...[const SizedBox(height: 6), _info(LucideIcons.user, plan.customerName)],
+        const SizedBox(height: 6),
+        _info(LucideIcons.clock, '${Formatters.formatDate(plan.startTime)} · ${Formatters.formatTime(plan.startTime)}${plan.endTime != null ? ' - ${Formatters.formatTime(plan.endTime)}' : ''}'),
+        if (loc != null && loc.isNotEmpty) ...[const SizedBox(height: 6), _info(LucideIcons.mapPin, loc)],
+        if (plan.assignees.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(height: 1, color: AppColors.borderLight),
+          const SizedBox(height: 10),
+          const Text('Nhân sự phụ trách', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
+          const SizedBox(height: 8),
+          ...plan.assignees.map((a) {
+            final isLead = a.role == 'LEAD';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(children: [
+                Icon(isLead ? LucideIcons.userCheck : LucideIcons.user, size: 14, color: isLead ? AppColors.leaderPurple : Colors.blue.shade700),
+                const SizedBox(width: 6),
+                Expanded(child: Text('${a.fullName}${isLead ? ' · Trưởng nhóm' : ''}', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary))),
+                if (a.checkOutAt != null && a.checkOutAt!.isNotEmpty)
+                  _pill('Đã check-out', _tone('ok').bg, _tone('ok').fg)
+                else if (a.isCheckedIn)
+                  _pill('Đã check-in', _tone('info').bg, _tone('info').fg)
+                else
+                  _pill('Chưa check-in', AppColors.pendingBg, AppColors.pendingText),
+              ]),
+            );
+          }),
+        ],
+      ]),
+    );
+  }
+
+  Widget _sectionTitle(IconData icon, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2, bottom: 10),
+      child: Row(children: [
+        Icon(icon, size: 16, color: AppColors.primary),
+        const SizedBox(width: 8),
+        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+      ]),
+    );
+  }
+
+  Widget _emptyHint(String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.borderLight)),
+      child: Text(text, style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted, fontStyle: FontStyle.italic)),
     );
   }
 
@@ -357,58 +445,41 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderLight),
-      ),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.borderLight)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
     );
   }
 
-  Widget _primaryAction(ManagerPlanDetailProvider p, String id, IconData icon, String label, VoidCallback onTap) {
-    final busy = p.busyId == id;
+  Widget _primary(String id, IconData icon, String label, VoidCallback onTap) {
+    final busy = _busyId == id;
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: busy ? null : onTap,
-        icon: busy
-            ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : Icon(icon, size: 16),
+        icon: busy ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Icon(icon, size: 16),
         label: Text(busy ? 'Đang xử lý…' : label, style: const TextStyle(fontWeight: FontWeight.bold)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(vertical: 11),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+        style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(vertical: 11), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
       ),
     );
   }
 
-  Widget _secondaryAction(IconData icon, String label, VoidCallback onTap) {
+  Widget _secondary(IconData icon, String label, VoidCallback onTap) {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
         onPressed: onTap,
         icon: Icon(icon, size: 16),
         label: Text(label),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
-          padding: const EdgeInsets.symmetric(vertical: 11),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+        style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary, side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)), padding: const EdgeInsets.symmetric(vertical: 11), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
       ),
     );
   }
 
-  Widget _infoRow(IconData icon, String text, {Color? color, bool bold = false}) {
+  Widget _info(IconData icon, String text, {Color? color, bool bold = false}) {
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Icon(icon, size: 13, color: color ?? AppColors.textSecondary),
       const SizedBox(width: 6),
-      Expanded(child: Text(text, style: TextStyle(fontSize: 12.5, fontWeight: bold ? FontWeight.w600 : FontWeight.normal, color: color ?? AppColors.textSecondary))),
+      Expanded(child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, fontWeight: bold ? FontWeight.w600 : FontWeight.normal, color: color ?? AppColors.textSecondary))),
     ]);
   }
 
@@ -423,48 +494,14 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
   }
 
   Widget _pill(String label, Color bg, Color fg) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: fg)),
-    );
+    return Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3), decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)), child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: fg)));
   }
 
   Widget _tag(String label, ({Color bg, Color fg}) tone) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: tone.bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: tone.fg)),
-    );
+    return Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2), decoration: BoxDecoration(color: tone.bg, borderRadius: BorderRadius.circular(6)), child: Text(label, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: tone.fg)));
   }
 
-  String _statusKind(String s) {
-    switch (s.toUpperCase()) {
-      case 'COMPLETED':
-        return 'ok';
-      case 'IN_PROGRESS':
-        return 'warn';
-      case 'CANCELLED':
-        return 'danger';
-      case 'CONFIRMED':
-        return 'info';
-      default:
-        return 'neutral';
-    }
-  }
-
-  String _methodLabel(String? m) {
-    switch (m) {
-      case 'cash':
-        return 'Tiền mặt';
-      case 'bank_transfer':
-        return 'Chuyển khoản';
-      default:
-        return m ?? '--';
-    }
-  }
-
-  String _changeTypeLabel(String t) {
+  String _changeType(String t) {
     switch (t) {
       case 'add':
         return 'Thêm thiết bị';

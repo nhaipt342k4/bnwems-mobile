@@ -7,11 +7,14 @@ import '../../data/models/work_task_models.dart';
 class SupplierTransactionSection extends StatelessWidget {
   final List<SupplierTransaction> transactions;
   final Future<void> Function(String transactionId, String stItemId, int receivedQuantity) onReceiveItem;
+  // Chỉ xem (manager review): ẩn nút bút chì cập nhật SL nhận.
+  final bool readOnly;
 
   const SupplierTransactionSection({
     super.key,
     required this.transactions,
     required this.onReceiveItem,
+    this.readOnly = false,
   });
 
   @override
@@ -79,13 +82,15 @@ class SupplierTransactionSection extends StatelessWidget {
                                 color: item.receivedQuantity >= item.quantity ? AppColors.completedText : AppColors.inProgressText,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(LucideIcons.edit2, size: 16, color: AppColors.primary),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: () => _showUpdateDialog(context, tx.transactionId, item),
-                            ),
+                            if (!readOnly) ...[
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(LucideIcons.edit2, size: 16, color: AppColors.primary),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () => _showUpdateDialog(context, tx.transactionId, item),
+                              ),
+                            ],
                           ],
                         ),
                       ],
