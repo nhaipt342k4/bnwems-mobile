@@ -18,9 +18,11 @@ import '../../data/services/settlement_api_service.dart';
 import '../../data/services/supplier_transaction_api_service.dart';
 import '../../data/services/survey_report_api_service.dart';
 import '../providers/task_provider.dart';
+import '../widgets/change_request_form_sheet.dart';
 import '../widgets/check_in_modal_bottom_sheet.dart';
 import '../widgets/collected_report_section.dart';
 import '../widgets/equipment_table.dart';
+import '../widgets/field_payment_section.dart';
 import '../widgets/handover_section.dart';
 import '../widgets/settlement_section.dart';
 import '../widgets/supplier_transaction_section.dart';
@@ -53,6 +55,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
   List<WorkTaskItem> _items = [];
   List<SupplierTransaction> _supplierTransactions = [];
   SurveyReport? _surveyReport;
+  FieldPaymentRecord? _fieldPayment;
   CollectedEquipmentReport? _internalCollectedReport;
   CollectedEquipmentReport? _supplierCollectedReport;
   Settlement? _settlement;
@@ -101,8 +104,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
       }).catchError((_) {}).whenComplete(checkFinished);
     }
 
-    // 2. Supplier Transactions (For SETUP)
-    if (plan.taskCode == 'SETUP') {
+    // 2. Supplier Transactions (SETUP: nhận đồ NCC; COLLECT: báo cáo thu hồi đồ NCC)
+    if (plan.taskCode == 'SETUP' || plan.taskCode == 'COLLECT') {
       pendingTasks++;
       _supplierService.listWithItems(plan.orderId).then((txs) {
         if (mounted) setState(() => _supplierTransactions = txs);
@@ -124,6 +127,24 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
           }
           if (mounted) {
             setState(() => _surveyReport = SurveyReport.fromJson(dto, evidencePhotoUrl: photoUrl));
+          }
+        }
+      }).catchError((_) {}).whenComplete(checkFinished);
+
+      // 3b. Cọc hiện trường đã ghi nhận (nếu có) — hiện lại ở FieldPaymentSection
+      pendingTasks++;
+      _depositService.list(plan.orderId).then((deposits) async {
+        if (deposits.isNotEmpty) {
+          final d = deposits.first;
+          String photoUrl = '';
+          if (d['evidenceId'] != null) {
+            try {
+              final ev = await _evidenceService.getById(d['evidenceId'].toString());
+              photoUrl = ev.fileUrl;
+            } catch (_) {}
+          }
+          if (mounted) {
+            setState(() => _fieldPayment = FieldPaymentRecord.fromJson(d, evidencePhotoUrl: photoUrl.isEmpty ? null : photoUrl));
           }
         }
       }).catchError((_) {}).whenComplete(checkFinished);
@@ -375,6 +396,28 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     await _loadData();
                   },
                 ),
+                const SizedBox(height: 16),
+                // Thu cọc hiện trường (Leader ghi nhận; Manager xác nhận PAID trên web → đơn CONFIRMED + giữ chỗ thiết bị)
+                FieldPaymentSection(
+                  existingPayment: _fieldPayment,
+                  onSubmit: (input) async {
+                    String? evId;
+                    if (input.photoFile != null) {
+                      final ev = await _evidenceService.upload(input.photoFile!);
+                      evId = ev.evidenceId;
+                    }
+                    await _depositService.create(
+                      plan.orderId,
+                      CreateDepositBody(
+                        amount: input.amount,
+                        paymentMethod: input.method,
+                        evidenceId: evId,
+                        notes: (input.note != null && input.note!.isNotEmpty) ? input.note : null,
+                      ),
+                    );
+                    await _loadData();
+                  },
+                ),
               ],
 
               if (plan.taskCode == 'SETUP') ...[
@@ -425,6 +468,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     await _loadData();
                   },
                 ),
+                const SizedBox(height: 16),
+                // Gửi yêu cầu đổi/bổ sung/bớt thiết bị phát sinh tại hiện trường → Manager duyệt
+                OutlinedButton.icon(
+                  onPressed: () => ChangeRequestFormSheet.show(
+                    context,
+                    orderId: plan.orderId,
+                    orderItems: _items,
+                    onSubmitted: _loadData,
+                  ),
+                  icon: const Icon(LucideIcons.replace, size: 18),
+                  label: const Text('Gửi yêu cầu đổi thiết bị'),
+                  style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 46)),
+                ),
               ],
 
               if (plan.taskCode == 'COLLECT') ...[
@@ -434,6 +490,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   existingInternalReport: _internalCollectedReport,
                   existingSupplierReport: _supplierCollectedReport,
                   items: _items,
+                  supplierTransactions: _supplierTransactions,
                   isWarehouseConfirmed: taskProvider.isWarehouseConfirmed(plan.planId),
                   onCompensationChanged: (suggested) {
                     if (mounted && _suggestedCompensation != suggested) {

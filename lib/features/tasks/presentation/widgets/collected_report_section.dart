@@ -24,6 +24,9 @@ class CollectedEquipmentReportSection extends StatefulWidget {
   final CollectedEquipmentReport? existingSupplierReport;
   final List<WorkTaskItem> items;
 
+  /// Thiết bị thuê NCC (theo giao dịch) — để lập báo cáo thu hồi nhóm Nhà cung cấp (reportType SUPPLIER).
+  final List<SupplierTransaction> supplierTransactions;
+
   /// Bước 1: gửi báo cáo thu hồi
   final Future<void> Function(CollectedEquipmentReportSubmitInput input) onSubmit;
 
@@ -41,6 +44,7 @@ class CollectedEquipmentReportSection extends StatefulWidget {
     this.existingInternalReport,
     this.existingSupplierReport,
     required this.items,
+    this.supplierTransactions = const [],
     required this.onSubmit,
     this.onConfirmWarehouse,
     this.isWarehouseConfirmed = false,
@@ -55,6 +59,12 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
   final Map<String, int> _goodQty = {};
   final Map<String, int> _damagedQty = {};
   final Map<String, int> _lostQty = {};
+
+  // Nhóm NCC: đếm theo stItemId của từng dòng giao dịch NCC
+  final Map<String, int> _supGoodQty = {};
+  final Map<String, int> _supDamagedQty = {};
+  final Map<String, int> _supLostQty = {};
+  String? _submittingSupplierTxId;
 
   bool _isSubmitting = false;
   bool _isConfirmingWarehouse = false;
@@ -74,6 +84,42 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
       _goodQty[item.itemId] = item.quantity;
       _damagedQty[item.itemId] = 0;
       _lostQty[item.itemId] = 0;
+    }
+    for (final tx in widget.supplierTransactions) {
+      for (final it in tx.items) {
+        _supGoodQty[it.stItemId] = it.quantity;
+        _supDamagedQty[it.stItemId] = 0;
+        _supLostQty[it.stItemId] = 0;
+      }
+    }
+  }
+
+  Future<void> _handleSubmitSupplierReport(SupplierTransaction tx) async {
+    final reportItems = tx.items.map((it) {
+      return {
+        'itemId': it.itemId,
+        'goodQuantity': _supGoodQty[it.stItemId] ?? 0,
+        'damagedQuantity': _supDamagedQty[it.stItemId] ?? 0,
+        'lostQuantity': _supLostQty[it.stItemId] ?? 0,
+      };
+    }).toList();
+
+    setState(() {
+      _submittingSupplierTxId = tx.transactionId;
+      _error = null;
+    });
+    try {
+      await widget.onSubmit(
+        CollectedEquipmentReportSubmitInput(
+          reportType: 'SUPPLIER',
+          transactionId: tx.transactionId,
+          items: reportItems,
+        ),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _submittingSupplierTxId = null);
     }
   }
 
@@ -349,10 +395,108 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
             ),
           ],
 
+          // ──── Nhóm Nhà cung cấp (thu hồi đồ thuê NCC) ────
+          ..._buildSupplierSection(),
+
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!, style: const TextStyle(fontSize: 12, color: AppColors.cancelledText)),
           ],
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildSupplierSection() {
+    final txsWithItems = widget.supplierTransactions.where((t) => t.items.isNotEmpty).toList();
+    if (txsWithItems.isEmpty) return const [];
+    final submitted = widget.existingSupplierReport != null;
+    return [
+      const SizedBox(height: 16),
+      const Divider(height: 1),
+      const SizedBox(height: 12),
+      Row(
+        children: [
+          const Icon(LucideIcons.truck, size: 16, color: AppColors.primary),
+          const SizedBox(width: 6),
+          const Expanded(
+            child: Text('Thiết bị thuê Nhà cung cấp', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          ),
+          if (submitted)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: Colors.green.shade600, borderRadius: BorderRadius.circular(20)),
+              child: const Text('Đã gửi', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+        ],
+      ),
+      const SizedBox(height: 10),
+      if (submitted)
+        _buildSubmittedReportView(widget.existingSupplierReport!)
+      else
+        ...txsWithItems.map(_buildSupplierTxCard),
+    ];
+  }
+
+  Widget _buildSupplierTxCard(SupplierTransaction tx) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('${tx.supplierName} · ${tx.transactionCode}',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+          const SizedBox(height: 8),
+          ...tx.items.map((it) {
+            final good = _supGoodQty[it.stItemId] ?? it.quantity;
+            final damaged = _supDamagedQty[it.stItemId] ?? 0;
+            final lost = _supLostQty[it.stItemId] ?? 0;
+            final hasIssue = damaged > 0 || lost > 0;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: hasIssue ? Colors.orange.shade50 : AppColors.surface,
+                borderRadius: BorderRadius.circular(10),
+                border: hasIssue ? Border.all(color: Colors.orange.shade200) : null,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${it.itemName} (${it.quantity})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildQtyPicker('Tốt', good, (v) => setState(() => _supGoodQty[it.stItemId] = v), AppColors.completedText),
+                      _buildQtyPicker('Hỏng', damaged, (v) => setState(() => _supDamagedQty[it.stItemId] = v), AppColors.inProgressText),
+                      _buildQtyPicker('Mất', lost, (v) => setState(() => _supLostQty[it.stItemId] = v), AppColors.cancelledText),
+                    ],
+                  ),
+                  if (hasIssue && it.unitCost > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Đền NCC: ${damaged + lost} × ${Formatters.formatCurrency(it.unitCost)} = ${Formatters.formatCurrency((damaged + lost) * it.unitCost)}',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.orange.shade800),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 6),
+          AppButton(
+            text: 'Gửi báo cáo thu hồi NCC',
+            isFullWidth: true,
+            isLoading: _submittingSupplierTxId == tx.transactionId,
+            onPressed: () => _handleSubmitSupplierReport(tx),
+          ),
         ],
       ),
     );
