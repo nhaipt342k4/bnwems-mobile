@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/services/fcm_service.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -31,9 +31,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     super.initState();
     _fcmService.initialize();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = context.read<AuthProvider>().user;
       context.read<NotificationProvider>().loadNotifications();
-      context.read<TaskProvider>().loadMyPlans(currentUserId: user?.id);
+      context.read<TaskProvider>().loadMyPlans();
     });
   }
 
@@ -105,10 +104,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            final user = context.read<AuthProvider>().user;
             await Future.wait([
               notifProvider.loadNotifications(),
-              taskProvider.loadMyPlans(currentUserId: user?.id),
+              taskProvider.loadMyPlans(),
             ]);
           },
           child: ListView(

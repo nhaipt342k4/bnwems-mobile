@@ -7,13 +7,15 @@ class SchedulePlanApiService {
   SchedulePlanApiService({ApiClient? apiClient})
       : _apiClient = apiClient ?? ApiClient();
 
+  // Lưu ý: KHÔNG còn tham số assigneeUserId. Với app nhân viên, server tự giới hạn danh sách theo token
+  // (role STAFF chỉ nhận lịch của đơn mình được phân công) — client không cần (và không nên) tự truyền
+  // assigneeUserId nữa. Bộ lọc "của tôi" đã được enforce ở backend.
   Future<List<SchedulePlan>> list({
     String? orderId,
     SchedulePlanStatus? status,
     String? taskId,
     String? dateFrom,
     String? dateTo,
-    String? assigneeUserId,
     int? page,
     int? limit,
   }) async {
@@ -23,7 +25,6 @@ class SchedulePlanApiService {
     if (taskId != null) query['taskId'] = taskId;
     if (dateFrom != null) query['dateFrom'] = dateFrom;
     if (dateTo != null) query['dateTo'] = dateTo;
-    if (assigneeUserId != null) query['assigneeUserId'] = assigneeUserId;
     if (page != null) query['page'] = page;
     if (limit != null) query['limit'] = limit;
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_header.dart';
@@ -53,7 +53,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () => taskProvider.loadMyPlans(currentUserId: user?.id),
+          onRefresh: () => taskProvider.loadMyPlans(),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16.0),

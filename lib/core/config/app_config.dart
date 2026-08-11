@@ -7,7 +7,7 @@ class AppConfig {
   /// Base URL mặc định kết nối Backend (Backend chạy ở PORT 3001 theo .env)
   static const String _envBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:3001/api/v1',
+    defaultValue: 'https://api.tochucsukien-binhnguyen.space/api/v1',
   );
 
   /// Base URL cho API backend.

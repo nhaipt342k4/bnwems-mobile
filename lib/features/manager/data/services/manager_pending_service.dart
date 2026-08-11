@@ -6,6 +6,8 @@ import 'manager_deposit_service.dart';
 import 'manager_settlement_service.dart';
 import 'manager_change_request_service.dart';
 import 'manager_inventory_service.dart';
+import 'manager_survey_service.dart';
+import '../models/survey_pending.dart';
 
 class ManagerPendingService {
   final ManagerOrderService _orderService;
@@ -13,6 +15,7 @@ class ManagerPendingService {
   final ManagerSettlementService _settlementService;
   final ManagerChangeRequestService _changeRequestService;
   final ManagerInventoryService _inventoryService;
+  final ManagerSurveyService _surveyService;
 
   ManagerPendingService({
     ManagerOrderService? orderService,
@@ -20,11 +23,13 @@ class ManagerPendingService {
     ManagerSettlementService? settlementService,
     ManagerChangeRequestService? changeRequestService,
     ManagerInventoryService? inventoryService,
+    ManagerSurveyService? surveyService,
   })  : _orderService = orderService ?? ManagerOrderService(),
         _depositService = depositService ?? ManagerDepositService(),
         _settlementService = settlementService ?? ManagerSettlementService(),
         _changeRequestService = changeRequestService ?? ManagerChangeRequestService(),
-        _inventoryService = inventoryService ?? ManagerInventoryService();
+        _inventoryService = inventoryService ?? ManagerInventoryService(),
+        _surveyService = surveyService ?? ManagerSurveyService();
 
   /// Gộp mọi nội dung đang chờ Manager xử lý tương tự pendingApiService.ts trên FE Web
   Future<PendingSummary> getPendingSummary() async {
@@ -74,12 +79,16 @@ class ManagerPendingService {
 
         // Return Reports
         _inventoryService.getReturnReports(status: 'SUBMITTED'),
+
+        // Khảo sát chờ manager xác nhận
+        _surveyService.getPendingSurveys().catchError((_) => <SurveyPending>[]),
       ]);
 
       final rawDeposits = results[0] as List<List<Deposit>>;
       final rawSettlements = results[1] as List<Settlement?>;
       final changeRequests = results[2] as List;
       final rawReports = results[3] as List;
+      final surveys = results[4] as List<SurveyPending>;
 
       final deposits = rawDeposits.expand((x) => x).toList();
       final settlements = rawSettlements.whereType<Settlement>().toList();
@@ -90,6 +99,7 @@ class ManagerPendingService {
         settlements: settlements,
         changeRequests: changeRequests.cast(),
         returnReports: returnReports.cast(),
+        surveys: surveys,
       );
     } catch (e) {
       return PendingSummary.empty();

@@ -142,13 +142,15 @@ class TaskProvider extends ChangeNotifier {
     return null;
   }
 
-  Future<void> loadMyPlans({String? currentUserId}) async {
+  /// Lấy các kế hoạch của nhân viên đang đăng nhập. Server tự giới hạn theo token (role STAFF chỉ nhận
+  /// lịch của đơn mình được phân công) nên KHÔNG cần truyền id người dùng từ client nữa.
+  Future<void> loadMyPlans() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final plans = await _planApiService.list(assigneeUserId: currentUserId);
+      final plans = await _planApiService.list();
       _myPlans = plans;
       _isLoading = false;
       notifyListeners();

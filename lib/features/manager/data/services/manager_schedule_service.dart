@@ -36,4 +36,10 @@ class ManagerScheduleService {
 
     return result.map((item) => ManagerSchedulePlan.fromJson(item as Map<String, dynamic>)).toList();
   }
+
+  /// GET /schedule-plans/:planId — manager có quyền đọc mọi plan (BE không scope manager).
+  Future<ManagerSchedulePlan> getSchedulePlanById(String planId) async {
+    final result = await _apiClient.fetchData<Map<String, dynamic>>('/schedule-plans/$planId');
+    return ManagerSchedulePlan.fromJson(result);
+  }
 }

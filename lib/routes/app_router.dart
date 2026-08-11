@@ -24,6 +24,7 @@ import '../features/manager/presentation/pages/manager_pending_screen.dart';
 import '../features/manager/presentation/pages/manager_schedule_screen.dart';
 import '../features/manager/presentation/pages/manager_return_reports_screen.dart';
 import '../features/manager/presentation/pages/manager_return_report_detail_screen.dart';
+import '../features/manager/presentation/pages/manager_plan_detail_screen.dart';
 import '../features/manager/presentation/pages/manager_profile_screen.dart';
 import '../features/manager/presentation/pages/manager_notifications_screen.dart';
 import '../shared/main_layout.dart';
@@ -193,6 +194,13 @@ GoRouter createRouter(AuthProvider authProvider) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return ManagerReturnReportDetailScreen(reportId: id);
+        },
+      ),
+      GoRoute(
+        path: '/manager/plans/:planId',
+        builder: (context, state) {
+          final id = state.pathParameters['planId']!;
+          return ManagerPlanDetailScreen(planId: id);
         },
       ),
       GoRoute(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
@@ -392,29 +392,42 @@ class _ManagerOrderDetailScreenState extends State<ManagerOrderDetailScreen> {
                           else
                             Column(
                               children: provider.plans.map((plan) {
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: AppColors.borderLight),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(Formatters.formatStatus(plan.status), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                                          Text(plan.planCode, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(plan.taskName ?? 'Kế hoạch', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                                      const SizedBox(height: 4),
-                                      Text(Formatters.formatTime(plan.startTime), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                                    ],
+                                return InkWell(
+                                  onTap: () {
+                                    if (plan.planId.isNotEmpty) context.push('/manager/plans/${plan.planId}');
+                                  },
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: AppColors.borderLight),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(Formatters.formatStatus(plan.status), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                                            Text(plan.planCode, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(plan.taskName ?? 'Kế hoạch', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                                            ),
+                                            const Icon(LucideIcons.chevronRight, size: 16, color: AppColors.textMuted),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(Formatters.formatTime(plan.startTime), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                                      ],
+                                    ),
                                   ),
                                 );
                               }).toList(),

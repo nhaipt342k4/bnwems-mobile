@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
@@ -9,7 +8,8 @@ import '../../../authentication/presentation/providers/auth_provider.dart';
 import '../../../tasks/data/services/evidence_api_service.dart';
 import '../../../tasks/presentation/providers/task_provider.dart';
 import '../../../tasks/presentation/widgets/check_in_modal_bottom_sheet.dart';
-import '../../../tasks/presentation/widgets/current_task_card.dart';
+import '../widgets/schedule_timeline_tile.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class ScheduleCalendarScreen extends StatefulWidget {
   const ScheduleCalendarScreen({super.key});
@@ -223,53 +223,61 @@ class _ScheduleCalendarScreenState extends State<ScheduleCalendarScreen> {
                       icon: LucideIcons.calendarCheck,
                     ),
                   ] else ...[
-                    ...dayPlans.map(
-                      (plan) {
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, bottom: 14),
+                      child: Text(
+                        '${dayPlans.length} công việc trong ngày',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMuted),
+                      ),
+                    ),
+                    ...dayPlans.asMap().entries.map(
+                      (entry) {
+                        final index = entry.key;
+                        final plan = entry.value;
                         final myAssignee = user != null ? taskProvider.getMyAssignee(plan, user.id) : null;
                         final activePlan = user != null ? taskProvider.getActiveCheckedInPlan(user.id) : null;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: CurrentTaskCard(
-                            plan: plan,
-                            myAssignee: myAssignee,
-                            activePlan: activePlan,
-                            onCheckInPressed: () {
-                              if (user != null) {
-                                final activePlan = taskProvider.getActiveCheckedInPlan(user.id);
-                                if (activePlan != null && activePlan.planId != plan.planId) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Bạn đang thực hiện công việc "${activePlan.taskName}" (${activePlan.planCode}) chưa check-out. Vui lòng check-out trước khi check-in công việc mới.'),
-                                      backgroundColor: Colors.red.shade700,
-                                      duration: const Duration(seconds: 4),
-                                    ),
-                                  );
-                                  return;
-                                }
-                                CheckInModalBottomSheet.show(
-                                  context,
-                                  taskName: plan.taskName,
-                                  locationName: plan.location,
-                                  targetLatitude: plan.latitude,
-                                  targetLongitude: plan.longitude,
-                                  onConfirmCheckIn: (photoFile, lat, lng) async {
-                                    String? evidenceId;
-                                    try {
-                                      final ev = await EvidenceApiService().upload(photoFile);
-                                      evidenceId = ev.evidenceId;
-                                    } catch (_) {}
-                                    await taskProvider.checkIn(
-                                      plan.planId,
-                                      user.id,
-                                      checkInEvidenceId: evidenceId,
-                                      latitude: lat,
-                                      longitude: lng,
-                                    );
-                                  },
+                        return ScheduleTimelineTile(
+                          plan: plan,
+                          myAssignee: myAssignee,
+                          activePlan: activePlan,
+                          isFirst: index == 0,
+                          isLast: index == dayPlans.length - 1,
+                          onCheckInPressed: () {
+                            if (user != null) {
+                              final activePlan = taskProvider.getActiveCheckedInPlan(user.id);
+                              if (activePlan != null && activePlan.planId != plan.planId) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Bạn đang thực hiện công việc "${activePlan.taskName}" (${activePlan.planCode}) chưa check-out. Vui lòng check-out trước khi check-in công việc mới.'),
+                                    backgroundColor: Colors.red.shade700,
+                                    duration: const Duration(seconds: 4),
+                                  ),
                                 );
+                                return;
                               }
-                            },
-                          ),
+                              CheckInModalBottomSheet.show(
+                                context,
+                                taskName: plan.taskName,
+                                locationName: plan.location,
+                                targetLatitude: plan.latitude,
+                                targetLongitude: plan.longitude,
+                                onConfirmCheckIn: (photoFile, lat, lng) async {
+                                  String? evidenceId;
+                                  try {
+                                    final ev = await EvidenceApiService().upload(photoFile);
+                                    evidenceId = ev.evidenceId;
+                                  } catch (_) {}
+                                  await taskProvider.checkIn(
+                                    plan.planId,
+                                    user.id,
+                                    checkInEvidenceId: evidenceId,
+                                    latitude: lat,
+                                    longitude: lng,
+                                  );
+                                },
+                              );
+                            }
+                          },
                         );
                       },
                     ),
