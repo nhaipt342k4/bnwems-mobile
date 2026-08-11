@@ -6,12 +6,14 @@ class CreateCollectedReportBody {
   final String? transactionId;
   final String? notes;
   final List<Map<String, dynamic>> items;
+  final List<String> evidenceIds;
 
   CreateCollectedReportBody({
     required this.reportType,
     this.transactionId,
     this.notes,
     required this.items,
+    this.evidenceIds = const [],
   });
 
   Map<String, dynamic> toJson() {
@@ -20,6 +22,7 @@ class CreateCollectedReportBody {
       if (transactionId != null) 'transactionId': transactionId,
       if (notes != null) 'notes': notes,
       'items': items,
+      if (evidenceIds.isNotEmpty) 'evidenceIds': evidenceIds,
     };
   }
 }

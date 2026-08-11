@@ -76,6 +76,14 @@ class WorkTaskItem {
   }
 }
 
+/// Parse mảng evidenceId (BE trả `evidenceIds: string[]`) thành `List<String>` an toàn.
+List<String> parseEvidenceIds(dynamic v) {
+  if (v is List) {
+    return v.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+  }
+  return const [];
+}
+
 class SchedulePlan {
   final String planId;
   final String planCode;
@@ -92,7 +100,7 @@ class SchedulePlan {
   final String? endTime;
   final String? location;
   final SchedulePlanStatus status;
-  final String? evidenceId;
+  final List<String> evidenceIds;
   final String? notes;
   final double? latitude;
   final double? longitude;
@@ -119,7 +127,7 @@ class SchedulePlan {
     this.latitude,
     this.longitude,
     required this.status,
-    this.evidenceId,
+    this.evidenceIds = const [],
     this.notes,
     required this.assignees,
     this.items = const [],
@@ -129,7 +137,7 @@ class SchedulePlan {
 
   SchedulePlan copyWith({
     SchedulePlanStatus? status,
-    String? evidenceId,
+    List<String>? evidenceIds,
     List<SchedulePlanAssignee>? assignees,
     List<WorkTaskItem>? items,
     List<SupplierTransaction>? supplierTransactions,
@@ -153,7 +161,7 @@ class SchedulePlan {
       latitude: latitude,
       longitude: longitude,
       status: status ?? this.status,
-      evidenceId: evidenceId ?? this.evidenceId,
+      evidenceIds: evidenceIds ?? this.evidenceIds,
       notes: notes,
       assignees: assignees ?? this.assignees,
       items: items ?? this.items,
@@ -191,7 +199,7 @@ class SchedulePlan {
           (json['event']?['longitude'] as num?)?.toDouble() ??
           (json['order']?['longitude'] as num?)?.toDouble(),
       status: json['status']?.toString() ?? 'PENDING',
-      evidenceId: json['evidenceId']?.toString(),
+      evidenceIds: parseEvidenceIds(json['evidenceIds']),
       notes: json['notes']?.toString(),
       assignees: assignees,
       createdAt: json['createdAt']?.toString() ?? json['created_at']?.toString(),
@@ -207,7 +215,7 @@ class SurveyReport {
   final String entrance;
   final String? siteConstraints;
   final String? proposedItems;
-  final String evidencePhotoUrl;
+  final List<String> evidencePhotoUrls;
   final String? notes;
 
   SurveyReport({
@@ -218,11 +226,14 @@ class SurveyReport {
     required this.entrance,
     this.siteConstraints,
     this.proposedItems,
-    required this.evidencePhotoUrl,
+    this.evidencePhotoUrls = const [],
     this.notes,
   });
 
-  factory SurveyReport.fromJson(Map<String, dynamic> json, {String? evidencePhotoUrl}) {
+  /// Ảnh đầu tiên (giữ để tương thích code cũ chỉ hiển thị 1 ảnh).
+  String get evidencePhotoUrl => evidencePhotoUrls.isEmpty ? '' : evidencePhotoUrls.first;
+
+  factory SurveyReport.fromJson(Map<String, dynamic> json, {List<String> evidencePhotoUrls = const []}) {
     return SurveyReport(
       submittedAt: json['createdAt']?.toString() ?? json['surveyDate']?.toString() ?? '',
       area: (json['area'] as num?)?.toDouble() ?? 0.0,
@@ -231,7 +242,7 @@ class SurveyReport {
       entrance: json['entrance']?.toString() ?? '',
       siteConstraints: json['siteConstraints']?.toString(),
       proposedItems: json['proposedItems']?.toString(),
-      evidencePhotoUrl: evidencePhotoUrl ?? '',
+      evidencePhotoUrls: evidencePhotoUrls,
       notes: json['notes']?.toString(),
     );
   }
@@ -317,6 +328,7 @@ class CollectedEquipmentReport {
   final String submittedAt;
   final String? confirmedAt;
   final List<CollectedEquipmentReportItem> items;
+  final List<String> evidenceIds;
 
   CollectedEquipmentReport({
     required this.reportId,
@@ -327,6 +339,7 @@ class CollectedEquipmentReport {
     required this.submittedAt,
     this.confirmedAt,
     required this.items,
+    this.evidenceIds = const [],
   });
 
   factory CollectedEquipmentReport.fromJson(Map<String, dynamic> json) {
@@ -342,6 +355,7 @@ class CollectedEquipmentReport {
       items: rawItems
           .map((i) => CollectedEquipmentReportItem.fromJson(i as Map<String, dynamic>))
           .toList(),
+      evidenceIds: parseEvidenceIds(json['evidenceIds']),
     );
   }
 }
@@ -356,6 +370,7 @@ class Settlement {
   final String? qrCodeUrl;
   final String? paidAt;
   final String? evidencePhotoUrl;
+  final List<String> evidenceIds;
   final String status; // 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'PAID'
   final String? requestedAt;
   final String? notes;
@@ -370,6 +385,7 @@ class Settlement {
     this.qrCodeUrl,
     this.paidAt,
     this.evidencePhotoUrl,
+    this.evidenceIds = const [],
     required this.status,
     this.requestedAt,
     this.notes,
@@ -393,6 +409,7 @@ class Settlement {
       qrCodeUrl: json['qrCodeUrl']?.toString(),
       paidAt: json['paidAt']?.toString(),
       evidencePhotoUrl: evidencePhotoUrl,
+      evidenceIds: parseEvidenceIds(json['evidenceIds']),
       status: json['status']?.toString() ?? 'DRAFT',
       requestedAt: json['requestedAt']?.toString(),
       notes: json['notes']?.toString(),

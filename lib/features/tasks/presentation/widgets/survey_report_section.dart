@@ -314,16 +314,24 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
               _buildDetailRow('Đề xuất', report.proposedItems!),
             if (report.notes != null && report.notes!.isNotEmpty)
               _buildDetailRow('Ghi chú', report.notes!),
-            if (report.evidencePhotoUrl.isNotEmpty) ...[
+            if (report.evidencePhotoUrls.isNotEmpty) ...[
               const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  report.evidencePhotoUrl,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (ctx, err, stack) => const SizedBox.shrink(),
+              SizedBox(
+                height: 140,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: report.evidencePhotoUrls.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) => ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      report.evidencePhotoUrls[i],
+                      height: 140,
+                      width: 200,
+                      fit: BoxFit.cover,
+                      errorBuilder: (ctx, err, stack) => const SizedBox(width: 200),
+                    ),
+                  ),
                 ),
               ),
             ],

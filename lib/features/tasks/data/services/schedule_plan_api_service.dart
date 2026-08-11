@@ -83,11 +83,12 @@ class SchedulePlanApiService {
     return SchedulePlan.fromDtoJson(response);
   }
 
-  Future<SchedulePlan> patchEvidence(String planId, String evidenceId) async {
+  // Gắn TẤT CẢ ảnh minh chứng cho lịch (BE nhận mảng evidenceIds, thay thế trọn bộ trong 1 lần gọi).
+  Future<SchedulePlan> patchEvidence(String planId, List<String> evidenceIds) async {
     final response = await _apiClient.fetchData<Map<String, dynamic>>(
       '/schedule-plans/$planId/evidence',
       method: 'PATCH',
-      body: {'evidenceId': evidenceId},
+      body: {'evidenceIds': evidenceIds},
     );
     return SchedulePlan.fromDtoJson(response);
   }

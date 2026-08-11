@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
@@ -11,11 +14,15 @@ class CollectedEquipmentReportSubmitInput {
   final String? notes;
   final List<Map<String, dynamic>> items;
 
+  /// Ảnh minh chứng kiểm đếm thu hồi (đặc biệt cho thiết bị hỏng/mất).
+  final List<File> photoFiles;
+
   CollectedEquipmentReportSubmitInput({
     required this.reportType,
     this.transactionId,
     this.notes,
     required this.items,
+    this.photoFiles = const [],
   });
 }
 
@@ -65,6 +72,10 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
   final Map<String, int> _supDamagedQty = {};
   final Map<String, int> _supLostQty = {};
   String? _submittingSupplierTxId;
+
+  // Ảnh minh chứng kiểm đếm (hỏng/mất) cho báo cáo Kho công ty.
+  final ImagePicker _picker = ImagePicker();
+  final List<File> _photoFiles = [];
 
   bool _isSubmitting = false;
   bool _isConfirmingWarehouse = false;
@@ -161,6 +172,7 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
         CollectedEquipmentReportSubmitInput(
           reportType: 'INTERNAL',
           items: reportItems,
+          photoFiles: List.from(_photoFiles),
         ),
       );
     } catch (e) {
@@ -173,6 +185,112 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  Future<void> _pickPhotos(ImageSource source) async {
+    try {
+      if (source == ImageSource.camera) {
+        final img = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+        if (img != null) setState(() => _photoFiles.add(File(img.path)));
+      } else {
+        final imgs = await _picker.pickMultiImage(imageQuality: 85);
+        if (imgs.isNotEmpty) setState(() => _photoFiles.addAll(imgs.map((x) => File(x.path))));
+      }
+    } catch (_) {}
+  }
+
+  void _showPhotoPicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(LucideIcons.camera, color: AppColors.primary),
+              title: const Text('Chụp ảnh'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickPhotos(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.image, color: AppColors.primary),
+              title: const Text('Chọn từ thư viện'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickPhotos(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoPicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(LucideIcons.camera, size: 15, color: AppColors.textSecondary),
+            const SizedBox(width: 6),
+            const Expanded(
+              child: Text('Ảnh minh chứng (khuyến nghị chụp thiết bị hỏng/mất)',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 76,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              for (int i = 0; i < _photoFiles.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(_photoFiles[i], width: 76, height: 76, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        right: 2,
+                        top: 2,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _photoFiles.removeAt(i)),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                            child: const Icon(LucideIcons.x, size: 12, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              GestureDetector(
+                onTap: _showPhotoPicker,
+                child: Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.borderLight),
+                  ),
+                  child: const Icon(LucideIcons.plus, color: AppColors.textMuted),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
   }
 
   Future<void> _handleConfirmWarehouse() async {
@@ -387,6 +505,8 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
               ),
             ],
 
+            _buildPhotoPicker(),
+
             AppButton(
               text: 'Gửi báo cáo thu hồi Kho công ty',
               isFullWidth: true,
@@ -474,9 +594,15 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildQtyPicker('Tốt', good, (v) => setState(() => _supGoodQty[it.stItemId] = v), AppColors.completedText),
-                      _buildQtyPicker('Hỏng', damaged, (v) => setState(() => _supDamagedQty[it.stItemId] = v), AppColors.inProgressText),
-                      _buildQtyPicker('Mất', lost, (v) => setState(() => _supLostQty[it.stItemId] = v), AppColors.cancelledText),
+                      _buildQtyPicker('Tốt', good, AppColors.completedText,
+                          onDec: good > 0 ? () => setState(() => _adjust(_supGoodQty, _supDamagedQty, _supLostQty, it.stItemId, 'good', -1)) : null,
+                          onInc: (damaged > 0 || lost > 0) ? () => setState(() => _adjust(_supGoodQty, _supDamagedQty, _supLostQty, it.stItemId, 'good', 1)) : null),
+                      _buildQtyPicker('Hỏng', damaged, AppColors.inProgressText,
+                          onDec: damaged > 0 ? () => setState(() => _adjust(_supGoodQty, _supDamagedQty, _supLostQty, it.stItemId, 'damaged', -1)) : null,
+                          onInc: good > 0 ? () => setState(() => _adjust(_supGoodQty, _supDamagedQty, _supLostQty, it.stItemId, 'damaged', 1)) : null),
+                      _buildQtyPicker('Mất', lost, AppColors.cancelledText,
+                          onDec: lost > 0 ? () => setState(() => _adjust(_supGoodQty, _supDamagedQty, _supLostQty, it.stItemId, 'lost', -1)) : null,
+                          onInc: good > 0 ? () => setState(() => _adjust(_supGoodQty, _supDamagedQty, _supLostQty, it.stItemId, 'lost', 1)) : null),
                     ],
                   ),
                   if (hasIssue && it.unitCost > 0) ...[
@@ -540,15 +666,15 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildQtyPicker('Tốt', good,
-                  (val) => _updateQtyAndNotify(() => _goodQty[id] = val),
-                  AppColors.completedText),
-              _buildQtyPicker('Hỏng', damaged,
-                  (val) => _updateQtyAndNotify(() => _damagedQty[id] = val),
-                  AppColors.inProgressText),
-              _buildQtyPicker('Mất', lost,
-                  (val) => _updateQtyAndNotify(() => _lostQty[id] = val),
-                  AppColors.cancelledText),
+              _buildQtyPicker('Tốt', good, AppColors.completedText,
+                  onDec: good > 0 ? () => _updateQtyAndNotify(() => _adjust(_goodQty, _damagedQty, _lostQty, id, 'good', -1)) : null,
+                  onInc: (damaged > 0 || lost > 0) ? () => _updateQtyAndNotify(() => _adjust(_goodQty, _damagedQty, _lostQty, id, 'good', 1)) : null),
+              _buildQtyPicker('Hỏng', damaged, AppColors.inProgressText,
+                  onDec: damaged > 0 ? () => _updateQtyAndNotify(() => _adjust(_goodQty, _damagedQty, _lostQty, id, 'damaged', -1)) : null,
+                  onInc: good > 0 ? () => _updateQtyAndNotify(() => _adjust(_goodQty, _damagedQty, _lostQty, id, 'damaged', 1)) : null),
+              _buildQtyPicker('Mất', lost, AppColors.cancelledText,
+                  onDec: lost > 0 ? () => _updateQtyAndNotify(() => _adjust(_goodQty, _damagedQty, _lostQty, id, 'lost', -1)) : null,
+                  onInc: good > 0 ? () => _updateQtyAndNotify(() => _adjust(_goodQty, _damagedQty, _lostQty, id, 'lost', 1)) : null),
             ],
           ),
           if (hasIssue && item.rentalPrice > 0) ...[
@@ -563,21 +689,90 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
     );
   }
 
-  Widget _buildQtyPicker(String label, int value, ValueChanged<int> onChanged, Color color) {
+  // Điều chỉnh 1 đơn vị và LUÔN giữ tổng: tốt + hỏng + mất = số lượng thu hồi.
+  // Tăng hỏng/mất tự trừ vào "Tốt"; giảm hỏng/mất tự cộng lại "Tốt". Trả về false nếu không hợp lệ (bị chặn).
+  bool _adjust(Map<String, int> g, Map<String, int> d, Map<String, int> l, String id, String kind, int dir) {
+    int good = g[id] ?? 0;
+    int dmg = d[id] ?? 0;
+    int lost = l[id] ?? 0;
+    switch (kind) {
+      case 'good':
+        if (dir > 0) {
+          // Tăng tốt = kéo 1 từ hỏng (ưu tiên) rồi tới mất.
+          if (dmg > 0) {
+            dmg--;
+            good++;
+          } else if (lost > 0) {
+            lost--;
+            good++;
+          } else {
+            return false;
+          }
+        } else {
+          // Giảm tốt = đánh dấu 1 thành hỏng.
+          if (good > 0) {
+            good--;
+            dmg++;
+          } else {
+            return false;
+          }
+        }
+        break;
+      case 'damaged':
+        if (dir > 0) {
+          if (good > 0) {
+            good--;
+            dmg++;
+          } else {
+            return false;
+          }
+        } else {
+          if (dmg > 0) {
+            dmg--;
+            good++;
+          } else {
+            return false;
+          }
+        }
+        break;
+      default: // lost
+        if (dir > 0) {
+          if (good > 0) {
+            good--;
+            lost++;
+          } else {
+            return false;
+          }
+        } else {
+          if (lost > 0) {
+            lost--;
+            good++;
+          } else {
+            return false;
+          }
+        }
+    }
+    g[id] = good;
+    d[id] = dmg;
+    l[id] = lost;
+    return true;
+  }
+
+  Widget _buildQtyPicker(String label, int value, Color color, {VoidCallback? onDec, VoidCallback? onInc}) {
     return Row(
       children: [
         Text('$label: ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
         InkWell(
-          onTap: value > 0 ? () => onChanged(value - 1) : null,
-          child: const Icon(LucideIcons.minusCircle, size: 16, color: AppColors.textMuted),
+          onTap: onDec,
+          child: Icon(LucideIcons.minusCircle, size: 16, color: onDec == null ? AppColors.textMuted.withValues(alpha: 0.3) : AppColors.textMuted),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6),
           child: Text('$value', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
         ),
         InkWell(
-          onTap: () => onChanged(value + 1),
-          child: Icon(LucideIcons.plusCircle, size: 16, color: color),
+          onTap: onInc,
+          child: Icon(LucideIcons.plusCircle, size: 16, color: onInc == null ? color.withValues(alpha: 0.3) : color),
         ),
       ],
     );

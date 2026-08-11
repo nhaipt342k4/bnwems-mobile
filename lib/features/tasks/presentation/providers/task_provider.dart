@@ -239,8 +239,8 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> patchEvidence(String planId, String evidenceId) async {
-    final updated = await _planApiService.patchEvidence(planId, evidenceId);
+  Future<void> patchEvidence(String planId, List<String> evidenceIds) async {
+    final updated = await _planApiService.patchEvidence(planId, evidenceIds);
     final index = _myPlans.indexWhere((p) => p.planId == planId);
     if (index >= 0) {
       _myPlans[index] = updated;

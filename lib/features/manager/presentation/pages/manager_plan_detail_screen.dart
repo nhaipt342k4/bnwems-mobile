@@ -69,6 +69,12 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
   CollectedEquipmentReport? _supplierCollected;
   Settlement? _settlement;
   List<ChangeRequest> _changeRequests = [];
+  // Ảnh minh chứng đã resolve URL (Leader nộp) — hiện cho Manager xem.
+  List<String> _handoverPhotoUrls = [];
+  List<String> _settlementPhotoUrls = [];
+  List<String> _collectedInternalUrls = [];
+  List<String> _collectedSupplierUrls = [];
+  final Map<String, String> _checkInUrls = {}; // userId -> fileUrl
 
   String? _busyId;
 
@@ -90,26 +96,49 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
       final orderId = plan.orderId;
       final futures = <Future<void>>[];
 
+      // Reset ảnh minh chứng để refresh không giữ URL cũ.
+      _handoverPhotoUrls = [];
+      _settlementPhotoUrls = [];
+      _collectedInternalUrls = [];
+      _collectedSupplierUrls = [];
+      _checkInUrls.clear();
+
+      // Ảnh check-in điểm danh của từng nhân sự (mọi loại việc) — resolve từ checkInEvidenceId.
+      for (final a in plan.assignees) {
+        final eid = a.checkInEvidenceId;
+        if (eid != null && eid.isNotEmpty) {
+          futures.add(() async {
+            try {
+              _checkInUrls[a.userId] = (await _evidenceService.getById(eid)).fileUrl;
+            } catch (_) {}
+          }());
+        }
+      }
+
       if (code == 'SETUP' || code == 'COLLECT') {
         futures.add(_inventoryService.getPicklist(orderId).then((v) => _items = v).catchError((_) => <WorkTaskItem>[]).then((_) {}));
         futures.add(_supplierService.listWithItems(orderId).then((v) => _supplierTxs = v).catchError((_) => <SupplierTransaction>[]).then((_) {}));
       }
       if (code == 'SETUP') {
         futures.add(_mgrChange.getChangeRequests(orderId: orderId).then((v) => _changeRequests = v).catchError((_) => <ChangeRequest>[]).then((_) {}));
+        // Ảnh biên bản bàn giao: plan mang evidenceIds (mọi ảnh Leader đã nộp) → resolve thành URL.
+        futures.add(() async {
+          _handoverPhotoUrls = await _resolveUrls(plan.evidenceIds);
+        }());
       }
       if (code == 'SURVEY') {
         futures.add(_surveyService.listByPlanId(plan.planId).then((rows) async {
           if (rows.isNotEmpty) {
-            final dto = rows.first;
-            _surveyId = dto['surveyId']?.toString();
-            _surveyStatus = dto['status']?.toString();
-            String url = '';
-            if (dto['evidenceId'] != null) {
+            _surveyId = rows.first['surveyId']?.toString();
+            _surveyStatus = rows.first['status']?.toString();
+            if (_surveyId != null) {
               try {
-                url = (await _evidenceService.getById(dto['evidenceId'].toString())).fileUrl;
+                // Lấy chi tiết đầy đủ (diện tích/lối vào/evidenceIds) — list chỉ có trường tóm tắt.
+                final detail = await _surveyService.getById(_surveyId!);
+                final urls = await _resolveUrls(parseEvidenceIds(detail['evidenceIds']));
+                _surveyReport = SurveyReport.fromJson(detail, evidencePhotoUrls: urls);
               } catch (_) {}
             }
-            _surveyReport = SurveyReport.fromJson(dto, evidencePhotoUrl: url);
           }
         }).catchError((_) {}));
         futures.add(_depositService.list(orderId).then((deps) async {
@@ -117,22 +146,22 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
             final d = deps.first;
             _depositId = d['depositId']?.toString();
             _depositStatus = d['status']?.toString();
-            String url = '';
-            if (d['evidenceId'] != null) {
-              try {
-                url = (await _evidenceService.getById(d['evidenceId'].toString())).fileUrl;
-              } catch (_) {}
-            }
-            _fieldPayment = FieldPaymentRecord.fromJson(d, evidencePhotoUrl: url.isEmpty ? null : url);
+            final urls = await _resolveUrls(parseEvidenceIds(d['evidenceIds']));
+            _fieldPayment = FieldPaymentRecord.fromJson(d, evidencePhotoUrl: urls.isEmpty ? null : urls.first);
           }
         }).catchError((_) {}));
       }
       if (code == 'COLLECT') {
-        futures.add(_collectedService.listByOrderId(orderId).then((reports) {
+        futures.add(_collectedService.listByOrderId(orderId).then((reports) async {
           _internalCollected = reports.cast<CollectedEquipmentReport?>().firstWhere((r) => r?.reportType == 'INTERNAL', orElse: () => null);
           _supplierCollected = reports.cast<CollectedEquipmentReport?>().firstWhere((r) => r?.reportType == 'SUPPLIER', orElse: () => null);
+          if (_internalCollected != null) _collectedInternalUrls = await _resolveUrls(_internalCollected!.evidenceIds);
+          if (_supplierCollected != null) _collectedSupplierUrls = await _resolveUrls(_supplierCollected!.evidenceIds);
         }).catchError((_) {}));
-        futures.add(_settlementService.getByOrderId(orderId).then((s) => _settlement = s).catchError((_) => null).then((_) {}));
+        futures.add(_settlementService.getByOrderId(orderId).then((s) async {
+          _settlement = s;
+          if (s != null) _settlementPhotoUrls = await _resolveUrls(s.evidenceIds);
+        }).catchError((_) => null).then((_) {}));
       }
 
       await Future.wait(futures);
@@ -162,6 +191,43 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
     } finally {
       if (mounted) setState(() => _busyId = null);
     }
+  }
+
+  // Resolve danh sách evidenceId → fileUrl (bỏ qua id lỗi).
+  Future<List<String>> _resolveUrls(List<String> ids) async {
+    final urls = <String>[];
+    for (final id in ids) {
+      try {
+        final ev = await _evidenceService.getById(id);
+        if (ev.fileUrl.isNotEmpty) urls.add(ev.fileUrl);
+      } catch (_) {}
+    }
+    return urls;
+  }
+
+  // Dải ảnh minh chứng cuộn ngang.
+  Widget _photoGallery(List<String> urls) {
+    return SizedBox(
+      height: 88,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: urls.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) => ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            urls[i],
+            width: 88,
+            height: 88,
+            fit: BoxFit.cover,
+            loadingBuilder: (_, child, progress) => progress == null
+                ? child
+                : Container(width: 88, height: 88, color: AppColors.background, alignment: Alignment.center, child: const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+            errorBuilder: (_, _, _) => Container(width: 88, height: 88, color: AppColors.background, alignment: Alignment.center, child: const Icon(LucideIcons.image, size: 18, color: AppColors.textMuted)),
+          ),
+        ),
+      ),
+    );
   }
 
   ({Color bg, Color fg}) _tone(String kind) {
@@ -263,9 +329,21 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
         _sectionTitle(LucideIcons.repeat, 'Yêu cầu đổi thiết bị'),
         ..._changeRequests.map(_changeCard),
       ],
-      const SizedBox(height: 16),
-      _emptyHint('Biên bản bàn giao (ảnh) sẽ bổ sung sau.'),
+      const SizedBox(height: 20),
+      _sectionTitle(LucideIcons.fileCheck2, 'Biên bản bàn giao'),
+      _handoverCard(),
     ];
+  }
+
+  Widget _handoverCard() {
+    if (_handoverPhotoUrls.isEmpty) {
+      return _emptyHint('Leader chưa gửi ảnh biên bản bàn giao.');
+    }
+    return _card([
+      Text('${_handoverPhotoUrls.length} ảnh biên bản Leader đã nộp', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+      const SizedBox(height: 10),
+      _photoGallery(_handoverPhotoUrls),
+    ]);
   }
 
   // ---------------- COLLECT ----------------
@@ -275,15 +353,15 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
       if (_items.isNotEmpty) EquipmentTable(items: _items) else _emptyHint('Chưa có dữ liệu thiết bị.'),
       const SizedBox(height: 20),
       _sectionTitle(LucideIcons.clipboardCheck, 'Báo cáo kiểm đếm thu hồi'),
-      if (_internalCollected != null) _collectedCard(_internalCollected!, 'Kho công ty') else _emptyHint('Leader chưa nộp báo cáo thu hồi kho công ty.'),
-      if (_supplierCollected != null) _collectedCard(_supplierCollected!, 'Thiết bị NCC'),
+      if (_internalCollected != null) _collectedCard(_internalCollected!, 'Kho công ty', _collectedInternalUrls) else _emptyHint('Leader chưa nộp báo cáo thu hồi kho công ty.'),
+      if (_supplierCollected != null) _collectedCard(_supplierCollected!, 'Thiết bị NCC', _collectedSupplierUrls),
       const SizedBox(height: 20),
       _sectionTitle(LucideIcons.receipt, 'Quyết toán'),
       _settlementCard(),
     ];
   }
 
-  Widget _collectedCard(CollectedEquipmentReport r, String label) {
+  Widget _collectedCard(CollectedEquipmentReport r, String label, List<String> photoUrls) {
     final isSubmitted = r.status == 'SUBMITTED';
     final tone = _tone(isSubmitted ? 'warn' : 'ok');
     final good = r.items.fold<int>(0, (s, i) => s + i.goodQuantity);
@@ -308,6 +386,12 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
           )),
       const SizedBox(height: 4),
       Text('Tổng: tốt $good · hỏng $damaged · mất $lost', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+      if (photoUrls.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        Text('Ảnh minh chứng (${photoUrls.length})', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        const SizedBox(height: 6),
+        _photoGallery(photoUrls),
+      ],
       if (isSubmitted) ...[
         const SizedBox(height: 10),
         _primary(r.reportId, LucideIcons.checkCircle2, 'Xác nhận hoàn kho', () => _confirm(r.reportId, () => _mgrInventory.confirmReturnReport(r.reportId), 'Đã xác nhận hoàn kho')),
@@ -336,6 +420,12 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
       _kv('Phụ thu phát sinh', Formatters.formatCurrency(s.additionalFee)),
       _kv('Bồi thường hỏng/mất', Formatters.formatCurrency(s.compensation)),
       _kv('Giảm trừ', '- ${Formatters.formatCurrency(s.discount)}'),
+      if (_settlementPhotoUrls.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        Text('Ảnh chứng từ quyết toán (${_settlementPhotoUrls.length})', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        const SizedBox(height: 6),
+        _photoGallery(_settlementPhotoUrls),
+      ],
       const SizedBox(height: 10),
       _secondary(LucideIcons.arrowRight, isPaid ? 'Xem chi tiết quyết toán' : 'Mở để xác nhận thu nốt', () => context.push('/manager/settlements/${_plan!.orderId}')),
     ]);
@@ -406,6 +496,13 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
                 Icon(isLead ? LucideIcons.userCheck : LucideIcons.user, size: 14, color: isLead ? AppColors.leaderPurple : Colors.blue.shade700),
                 const SizedBox(width: 6),
                 Expanded(child: Text('${a.fullName}${isLead ? ' · Trưởng nhóm' : ''}', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary))),
+                if (_checkInUrls[a.userId] != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.network(_checkInUrls[a.userId]!, width: 28, height: 28, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 if (a.checkOutAt != null && a.checkOutAt!.isNotEmpty)
                   _pill('Đã check-out', _tone('ok').bg, _tone('ok').fg)
                 else if (a.isCheckedIn)

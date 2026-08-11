@@ -117,16 +117,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
       pendingTasks++;
       _surveyService.listByPlanId(plan.planId).then((surveyRows) async {
         if (surveyRows.isNotEmpty) {
-          final dto = surveyRows.first;
-          String photoUrl = '';
-          if (dto['evidenceId'] != null) {
+          final surveyId = surveyRows.first['surveyId']?.toString();
+          if (surveyId != null) {
             try {
-              final ev = await _evidenceService.getById(dto['evidenceId'].toString());
-              photoUrl = ev.fileUrl;
+              final detail = await _surveyService.getById(surveyId);
+              final urls = <String>[];
+              for (final id in parseEvidenceIds(detail['evidenceIds'])) {
+                try {
+                  urls.add((await _evidenceService.getById(id)).fileUrl);
+                } catch (_) {}
+              }
+              if (mounted) {
+                setState(() => _surveyReport = SurveyReport.fromJson(detail, evidencePhotoUrls: urls));
+              }
             } catch (_) {}
-          }
-          if (mounted) {
-            setState(() => _surveyReport = SurveyReport.fromJson(dto, evidencePhotoUrl: photoUrl));
           }
         }
       }).catchError((_) {}).whenComplete(checkFinished);
@@ -136,15 +140,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
       _depositService.list(plan.orderId).then((deposits) async {
         if (deposits.isNotEmpty) {
           final d = deposits.first;
-          String photoUrl = '';
-          if (d['evidenceId'] != null) {
+          String? photoUrl;
+          final ids = parseEvidenceIds(d['evidenceIds']);
+          if (ids.isNotEmpty) {
             try {
-              final ev = await _evidenceService.getById(d['evidenceId'].toString());
-              photoUrl = ev.fileUrl;
+              photoUrl = (await _evidenceService.getById(ids.first)).fileUrl;
             } catch (_) {}
           }
           if (mounted) {
-            setState(() => _fieldPayment = FieldPaymentRecord.fromJson(d, evidencePhotoUrl: photoUrl.isEmpty ? null : photoUrl));
+            setState(() => _fieldPayment = FieldPaymentRecord.fromJson(d, evidencePhotoUrl: photoUrl));
           }
         }
       }).catchError((_) {}).whenComplete(checkFinished);
@@ -370,10 +374,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   planStatus: plan.status,
                   isSubmitted: taskProvider.isSurveySubmitted(plan.planId),
                   onSubmit: (input) async {
+                    // Upload TẤT CẢ ảnh khảo sát; giữ mọi evidenceId để lưu vào báo cáo (không bỏ ảnh phụ).
+                    final evidenceIds = <String>[];
                     final primaryEv = await _evidenceService.upload(input.primaryPhoto);
+                    evidenceIds.add(primaryEv.evidenceId);
                     for (final photo in input.photoFiles.skip(1)) {
                       try {
-                        await _evidenceService.upload(photo);
+                        final ev = await _evidenceService.upload(photo);
+                        evidenceIds.add(ev.evidenceId);
                       } catch (_) {}
                     }
                     await _surveyService.create(
@@ -389,7 +397,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                         siteConstraints: input.siteConstraints,
                         proposedItems: input.proposedItems,
                         notes: input.notes,
-                        evidenceId: primaryEv.evidenceId,
+                        evidenceIds: evidenceIds,
                       ),
                     );
                     taskProvider.markSurveySubmitted(plan.planId);
@@ -453,16 +461,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   existingNotes: plan.notes,
                   isAlreadySubmitted: taskProvider.isHandoverSubmitted(plan.planId),
                   onSubmit: (note, photoFiles) async {
-                    String? lastEvidenceId;
+                    // Upload TẤT CẢ ảnh biên bản rồi gắn cả mảng evidenceId vào lịch trong 1 lần gọi.
+                    final evidenceIds = <String>[];
                     for (final photo in photoFiles) {
                       final ev = await _evidenceService.upload(
                         photo,
                         description: note.isNotEmpty ? note : null,
                       );
-                      lastEvidenceId = ev.evidenceId;
+                      evidenceIds.add(ev.evidenceId);
                     }
-                    if (lastEvidenceId != null) {
-                      await taskProvider.patchEvidence(plan.planId, lastEvidenceId);
+                    if (evidenceIds.isNotEmpty) {
+                      await taskProvider.patchEvidence(plan.planId, evidenceIds);
                     }
                     taskProvider.markHandoverSubmitted(plan.planId);
                     await _loadData();
@@ -498,6 +507,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     }
                   },
                   onSubmit: (input) async {
+                    // Upload ảnh minh chứng kiểm đếm (hỏng/mất) rồi gửi kèm evidenceIds.
+                    final evidenceIds = <String>[];
+                    for (final photo in input.photoFiles) {
+                      try {
+                        final ev = await _evidenceService.upload(photo);
+                        evidenceIds.add(ev.evidenceId);
+                      } catch (_) {}
+                    }
                     await _collectedService.create(
                       plan.orderId,
                       CreateCollectedReportBody(
@@ -505,6 +522,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                         transactionId: input.transactionId,
                         notes: input.notes,
                         items: input.items,
+                        evidenceIds: evidenceIds,
                       ),
                     );
                     await _loadData();

@@ -12,7 +12,7 @@ class CreateSurveyReportBody {
   final String? siteConstraints;
   final String? proposedItems;
   final String? notes;
-  final String? evidenceId;
+  final List<String> evidenceIds;
 
   CreateSurveyReportBody({
     required this.orderId,
@@ -26,7 +26,7 @@ class CreateSurveyReportBody {
     this.siteConstraints,
     this.proposedItems,
     this.notes,
-    this.evidenceId,
+    this.evidenceIds = const [],
   });
 
   Map<String, dynamic> toJson() {
@@ -42,7 +42,7 @@ class CreateSurveyReportBody {
       if (siteConstraints != null && siteConstraints!.trim().isNotEmpty) 'siteConstraints': siteConstraints,
       if (proposedItems != null && proposedItems!.trim().isNotEmpty) 'proposedItems': proposedItems,
       if (notes != null && notes!.trim().isNotEmpty) 'notes': notes,
-      if (evidenceId != null && evidenceId!.trim().isNotEmpty) 'evidenceId': evidenceId,
+      if (evidenceIds.isNotEmpty) 'evidenceIds': evidenceIds,
     };
   }
 }
@@ -70,5 +70,10 @@ class SurveyReportApiService {
         .map((row) => row as Map<String, dynamic>)
         .where((row) => row['planId'] == planId)
         .toList();
+  }
+
+  // Chi tiết 1 báo cáo khảo sát (đầy đủ diện tích/lối vào/evidenceIds) — dùng để hiển thị cho Manager.
+  Future<Map<String, dynamic>> getById(String surveyId) async {
+    return await _apiClient.fetchData<Map<String, dynamic>>('/survey-reports/$surveyId');
   }
 }
