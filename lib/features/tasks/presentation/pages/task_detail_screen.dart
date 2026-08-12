@@ -57,7 +57,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
   SurveyReport? _surveyReport;
   FieldPaymentRecord? _fieldPayment;
   CollectedEquipmentReport? _internalCollectedReport;
-  CollectedEquipmentReport? _supplierCollectedReport;
+  // Nhiều NCC → nhiều báo cáo thu hồi SUPPLIER (mỗi giao dịch 1 báo cáo, khớp theo transactionId). Trước
+  // đây chỉ giữ 1 cái nên gửi 1 NCC là gom hết — giờ giữ CẢ DANH SÁCH để render theo từng giao dịch.
+  List<CollectedEquipmentReport> _supplierCollectedReports = [];
   Settlement? _settlement;
   num _depositCollected = 0;
   double _suggestedCompensation = 0.0;
@@ -164,10 +166,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   (r) => r?.reportType == 'INTERNAL',
                   orElse: () => null,
                 );
-            _supplierCollectedReport = reports.cast<CollectedEquipmentReport?>().firstWhere(
-                  (r) => r?.reportType == 'SUPPLIER',
-                  orElse: () => null,
-                );
+            _supplierCollectedReports = reports.where((r) => r.reportType == 'SUPPLIER').toList();
           });
         }
       }).catchError((_) {}).whenComplete(checkFinished);
@@ -503,7 +502,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                 const SizedBox(height: 16),
                 CollectedEquipmentReportSection(
                   existingInternalReport: _internalCollectedReport,
-                  existingSupplierReport: _supplierCollectedReport,
+                  existingSupplierReports: _supplierCollectedReports,
                   items: _items,
                   supplierTransactions: _supplierTransactions,
                   // Trạng thái "đã hoàn kho" lấy từ SERVER (report.status=CONFIRMED) để đồng bộ với web,

@@ -28,7 +28,8 @@ class CollectedEquipmentReportSubmitInput {
 
 class CollectedEquipmentReportSection extends StatefulWidget {
   final CollectedEquipmentReport? existingInternalReport;
-  final CollectedEquipmentReport? existingSupplierReport;
+  /// Báo cáo thu hồi NCC ĐÃ gửi — MỖI giao dịch/NCC một cái (khớp theo transactionId). List rỗng = chưa gửi cái nào.
+  final List<CollectedEquipmentReport> existingSupplierReports;
   final List<WorkTaskItem> items;
 
   /// Thiết bị thuê NCC (theo giao dịch) — để lập báo cáo thu hồi nhóm Nhà cung cấp (reportType SUPPLIER).
@@ -49,7 +50,7 @@ class CollectedEquipmentReportSection extends StatefulWidget {
   const CollectedEquipmentReportSection({
     super.key,
     this.existingInternalReport,
-    this.existingSupplierReport,
+    this.existingSupplierReports = const [],
     required this.items,
     this.supplierTransactions = const [],
     required this.onSubmit,
@@ -531,10 +532,17 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
     );
   }
 
+  CollectedEquipmentReport? _supplierReportFor(String transactionId) {
+    for (final r in widget.existingSupplierReports) {
+      if (r.transactionId == transactionId) return r;
+    }
+    return null;
+  }
+
   List<Widget> _buildSupplierSection() {
     final txsWithItems = widget.supplierTransactions.where((t) => t.items.isNotEmpty).toList();
     if (txsWithItems.isEmpty) return const [];
-    final submitted = widget.existingSupplierReport != null;
+    final submittedCount = txsWithItems.where((t) => _supplierReportFor(t.transactionId) != null).length;
     return [
       const SizedBox(height: 16),
       const Divider(height: 1),
@@ -546,20 +554,54 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
           const Expanded(
             child: Text('Thiết bị thuê Nhà cung cấp', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
           ),
-          if (submitted)
+          if (submittedCount > 0)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(color: Colors.green.shade600, borderRadius: BorderRadius.circular(20)),
-              child: const Text('Đã gửi', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+              child: Text('Đã gửi $submittedCount/${txsWithItems.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
             ),
         ],
       ),
       const SizedBox(height: 10),
-      if (submitted)
-        _buildSubmittedReportView(widget.existingSupplierReport!)
-      else
-        ...txsWithItems.map(_buildSupplierTxCard),
+      // Mỗi NCC/giao dịch render RIÊNG theo transactionId: đã gửi thì hiện báo cáo, chưa gửi thì hiện thẻ
+      // nhập + nút gửi. Gửi báo cáo 1 NCC KHÔNG còn ảnh hưởng các NCC khác.
+      ...txsWithItems.map((tx) {
+        final report = _supplierReportFor(tx.transactionId);
+        return report != null ? _buildSupplierSubmittedCard(tx, report) : _buildSupplierTxCard(tx);
+      }),
     ];
+  }
+
+  Widget _buildSupplierSubmittedCard(SupplierTransaction tx, CollectedEquipmentReport report) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('${tx.supplierName} · ${tx.transactionCode}',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: Colors.green.shade600, borderRadius: BorderRadius.circular(20)),
+                child: const Text('Đã gửi', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildSubmittedReportView(report),
+        ],
+      ),
+    );
   }
 
   Widget _buildSupplierTxCard(SupplierTransaction tx) {
