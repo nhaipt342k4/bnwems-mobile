@@ -502,7 +502,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   existingSupplierReport: _supplierCollectedReport,
                   items: _items,
                   supplierTransactions: _supplierTransactions,
-                  isWarehouseConfirmed: taskProvider.isWarehouseConfirmed(plan.planId),
+                  // Trạng thái "đã hoàn kho" lấy từ SERVER (report.status=CONFIRMED) để đồng bộ với web,
+                  // không dùng cờ local SharedPreferences (chỉ nằm trên 1 máy, web không thấy).
+                  isWarehouseConfirmed: _internalCollectedReport?.status == 'CONFIRMED',
                   onCompensationChanged: (suggested) {
                     if (mounted && _suggestedCompensation != suggested) {
                       setState(() => _suggestedCompensation = suggested);
@@ -530,11 +532,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     await _loadData();
                   },
                   onConfirmWarehouse: () async {
-                    final movementItems = _items.map((i) => {
-                      'itemId': i.itemId,
-                      'quantity': i.quantity,
-                    }).toList();
-                    await taskProvider.warehouseMovement(plan.planId, movementItems);
+                    // Xác nhận hoàn kho = DUYỆT báo cáo thu hồi:
+                    // PUT /inventory/collected-equipment-reports/:reportId/confirm → BE đặt status=CONFIRMED
+                    // + tạo phiếu NHẬP kho (INBOUND). TRƯỚC ĐÂY gọi nhầm warehouseMovement (endpoint XUẤT kho
+                    // của ngày lắp đặt) + cờ local nên web không đổi trạng thái. Giờ web & mobile cùng đọc
+                    // report.status nên đồng bộ.
+                    final report = _internalCollectedReport;
+                    if (report == null) return;
+                    await _collectedService.confirm(report.reportId);
                     await _loadData();
                   },
                 ),
