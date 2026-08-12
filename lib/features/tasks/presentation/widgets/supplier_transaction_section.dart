@@ -87,13 +87,12 @@ class SupplierTransactionSection extends StatelessWidget {
                                 color: item.receivedQuantity >= item.quantity ? AppColors.completedText : AppColors.inProgressText,
                               ),
                             ),
-                            if (!readOnly) ...[
+                            if (!readOnly && item.receivedQuantity < item.quantity) ...[
                               const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(LucideIcons.edit2, size: 16, color: AppColors.primary),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                onPressed: () => _showUpdateDialog(context, tx.transactionId, item),
+                              // Xác nhận nhận ĐỦ dòng hàng này (receivedQuantity = quantity) — thay nút bút cũ
+                              // (mở dialog nhập số, không báo lỗi/thành công nên có vẻ "không gửi BE").
+                              _ReceiveLineButton(
+                                onReceive: () => onReceiveItem(tx.transactionId, item.stItemId, item.quantity),
                               ),
                             ],
                           ],
@@ -138,31 +137,6 @@ class SupplierTransactionSection extends StatelessWidget {
     }
   }
 
-  void _showUpdateDialog(BuildContext context, String transactionId, SupplierTransactionItem item) {
-    final controller = TextEditingController(text: item.receivedQuantity.toString());
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Cập nhật SL đã nhận: ${item.itemName}'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Số lượng thực nhận'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Hủy')),
-          ElevatedButton(
-            onPressed: () async {
-              final qty = int.tryParse(controller.text) ?? 0;
-              Navigator.of(context).pop();
-              await onReceiveItem(transactionId, item.stItemId, qty);
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // Nút "Xác nhận đã nhận" (Đã duyệt → Đã nhận) — có hỏi xác nhận + loading + báo kết quả. Tách stateful để
@@ -224,6 +198,59 @@ class _ConfirmReceivedButtonState extends State<_ConfirmReceivedButton> {
           minimumSize: const Size(double.infinity, 44),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
+      ),
+    );
+  }
+}
+
+// Nút "Xác nhận" cho TỪNG DÒNG hàng — đánh dấu dòng đã nhận đủ (receivedQuantity = quantity) + báo
+// thành công/lỗi rõ ràng (thay nút bút cũ vốn im lặng). Stateful để có loading riêng cho từng dòng.
+class _ReceiveLineButton extends StatefulWidget {
+  final Future<void> Function() onReceive;
+
+  const _ReceiveLineButton({required this.onReceive});
+
+  @override
+  State<_ReceiveLineButton> createState() => _ReceiveLineButtonState();
+}
+
+class _ReceiveLineButtonState extends State<_ReceiveLineButton> {
+  bool _loading = false;
+
+  Future<void> _run() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _loading = true);
+    try {
+      await widget.onReceive();
+      messenger.showSnackBar(
+        SnackBar(content: const Text('Đã xác nhận nhận dòng hàng'), backgroundColor: Colors.green.shade700),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Không thể xác nhận: $e'), backgroundColor: Colors.red.shade700),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 30,
+      child: ElevatedButton(
+        onPressed: _loading ? null : _run,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          minimumSize: const Size(0, 30),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: _loading
+            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : const Text('Xác nhận'),
       ),
     );
   }
