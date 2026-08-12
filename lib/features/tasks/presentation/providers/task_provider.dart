@@ -7,6 +7,7 @@ class TaskProvider extends ChangeNotifier {
   final SchedulePlanApiService _planApiService;
 
   List<SchedulePlan> _myPlans = [];
+  List<SchedulePlan> _activeCheckInPlans = []; // việc đang check-in dở (trang chủ) — từ GET /schedule-plans/active
   final Set<String> _confirmedWarehousePlanIds = {};
   final Set<String> _submittedSurveyPlanIds = {};
   final Set<String> _submittedHandoverPlanIds = {};
@@ -16,6 +17,7 @@ class TaskProvider extends ChangeNotifier {
   String _searchQuery = '';
 
   List<SchedulePlan> get myPlans => _myPlans;
+  List<SchedulePlan> get activeCheckInPlans => _activeCheckInPlans;
   Set<String> get confirmedWarehousePlanIds => _confirmedWarehousePlanIds;
   Set<String> get submittedSurveyPlanIds => _submittedSurveyPlanIds;
   Set<String> get submittedHandoverPlanIds => _submittedHandoverPlanIds;
@@ -161,6 +163,17 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
+  /// Tải các lịch người dùng đang check-in dở (chưa check-out) — cho card "việc đang làm" ở trang chủ.
+  /// Lỗi tải được nuốt im lặng vì đây chỉ là widget tiện ích, không nên chặn dashboard.
+  Future<void> loadActiveCheckIns() async {
+    try {
+      _activeCheckInPlans = await _planApiService.getActiveCheckIns();
+      notifyListeners();
+    } catch (_) {
+      // giữ nguyên danh sách cũ nếu lỗi mạng
+    }
+  }
+
   Future<void> refreshPlan(String planId) async {
     try {
       final updated = await _planApiService.getById(planId);
@@ -236,6 +249,8 @@ class TaskProvider extends ChangeNotifier {
     if (index >= 0) {
       _myPlans[index] = updated;
     }
+    // Đã check-out → không còn "đang làm" → gỡ khỏi card trang chủ ngay.
+    _activeCheckInPlans.removeWhere((p) => p.planId == planId);
     notifyListeners();
   }
 

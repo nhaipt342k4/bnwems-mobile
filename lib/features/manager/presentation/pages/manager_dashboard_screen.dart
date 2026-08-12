@@ -235,7 +235,8 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
                   GestureDetector(
-                    onTap: () => context.go('/manager/orders'),
+                    // Mở danh sách đơn ĐÃ lọc "Sắp diễn ra" (không phải Tất cả) — khớp đúng mục đang xem.
+                    onTap: () => context.go('/manager/orders?filter=upcoming'),
                     child: const Row(
                       children: [
                         Text('Xem tất cả', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),

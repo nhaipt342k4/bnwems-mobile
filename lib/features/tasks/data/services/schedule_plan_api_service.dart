@@ -38,6 +38,17 @@ class SchedulePlanApiService {
         .toList();
   }
 
+  // Các lịch mà chính người dùng (theo token) đang check-in dở, chưa check-out — cho card "việc đang làm"
+  // ở trang chủ. Server tự lọc theo user, không cần truyền tham số.
+  Future<List<SchedulePlan>> getActiveCheckIns() async {
+    final response = await _apiClient.fetchData<List<dynamic>>(
+      '/schedule-plans/active',
+    );
+    return response
+        .map((item) => SchedulePlan.fromDtoJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<SchedulePlan> getById(String planId) async {
     final response = await _apiClient.fetchData<Map<String, dynamic>>(
       '/schedule-plans/$planId',

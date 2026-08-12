@@ -148,7 +148,9 @@ GoRouter createRouter(AuthProvider authProvider) {
           ),
           GoRoute(
             path: '/manager/orders',
-            builder: (context, state) => const ManagerOrderListScreen(),
+            builder: (context, state) => ManagerOrderListScreen(
+              initialFilter: state.uri.queryParameters['filter'],
+            ),
           ),
           GoRoute(
             path: '/manager/pending',

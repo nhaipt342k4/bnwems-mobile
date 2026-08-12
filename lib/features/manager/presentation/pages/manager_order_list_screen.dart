@@ -7,7 +7,10 @@ import '../../../../core/utils/formatters.dart';
 import '../providers/manager_order_list_provider.dart';
 
 class ManagerOrderListScreen extends StatefulWidget {
-  const ManagerOrderListScreen({super.key});
+  /// Bộ lọc nhanh khởi tạo (deep-link từ trang chủ, vd '?filter=upcoming'). null = giữ nguyên bộ lọc hiện tại.
+  final String? initialFilter;
+
+  const ManagerOrderListScreen({super.key, this.initialFilter});
 
   @override
   State<ManagerOrderListScreen> createState() => _ManagerOrderListScreenState();
@@ -16,11 +19,31 @@ class ManagerOrderListScreen extends StatefulWidget {
 class _ManagerOrderListScreenState extends State<ManagerOrderListScreen> {
   final TextEditingController _searchController = TextEditingController();
 
+  QuickFilter? _quickFilterFromParam(String? p) {
+    switch (p) {
+      case 'upcoming':
+        return QuickFilter.upcoming;
+      case 'confirmed':
+        return QuickFilter.confirmed;
+      case 'inProgress':
+        return QuickFilter.inProgress;
+      case 'completed':
+        return QuickFilter.completed;
+      case 'all':
+        return QuickFilter.all;
+      default:
+        return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ManagerOrderListProvider>().fetchOrders();
+      final provider = context.read<ManagerOrderListProvider>();
+      final initial = _quickFilterFromParam(widget.initialFilter);
+      if (initial != null) provider.setQuickFilter(initial); // đồng bộ chip theo deep-link
+      provider.fetchOrders();
     });
   }
 

@@ -10,6 +10,7 @@ import '../../../tasks/data/services/evidence_api_service.dart';
 import '../../../tasks/presentation/providers/task_provider.dart';
 import '../../../tasks/presentation/widgets/check_in_modal_bottom_sheet.dart';
 import '../../../tasks/presentation/widgets/current_task_card.dart';
+import '../widgets/active_checkin_card.dart';
 import '../widgets/quick_attendance_card.dart';
 import '../widgets/task_statistic_grid.dart';
 
@@ -25,7 +26,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TaskProvider>().loadMyPlans();
+      final taskProvider = context.read<TaskProvider>();
+      taskProvider.loadMyPlans();
+      taskProvider.loadActiveCheckIns();
     });
   }
 
@@ -59,7 +62,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: RefreshIndicator(
-        onRefresh: () => taskProvider.loadMyPlans(),
+        onRefresh: () async {
+          await taskProvider.loadMyPlans();
+          await taskProvider.loadActiveCheckIns();
+        },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16.0),
@@ -120,6 +126,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Việc đang làm (đã check-in, chưa check-out) — nguồn: GET /schedule-plans/active
+              if (user != null && taskProvider.activeCheckInPlans.isNotEmpty) ...[
+                ...taskProvider.activeCheckInPlans.map(
+                  (plan) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: ActiveCheckInCard(
+                      plan: plan,
+                      myAssignee: taskProvider.getMyAssignee(plan, user.id),
+                      onCheckOut: () => taskProvider.checkOut(plan.planId, user.id),
+                    ),
+                  ),
+                ),
+              ],
 
               // Quick Attendance Card
               QuickAttendanceCard(

@@ -455,6 +455,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     await _supplierService.receiveItem(txId, stItemId, qty);
                     await _loadData();
                   },
+                  onConfirmReceived: (txId) async {
+                    await _supplierService.confirmReceived(txId);
+                    await _loadData();
+                  },
                 ),
 
 

@@ -320,13 +320,17 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: step == 2 ? Colors.green.shade50 : AppColors.surface,
+        color: step == 2
+            ? Colors.green.shade50
+            : step == 1
+                ? Colors.orange.shade50
+                : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: step == 2
               ? Colors.green.shade300
               : step == 1
-                  ? Colors.blue.shade200
+                  ? Colors.orange.shade300
                   : AppColors.borderLight,
           width: step >= 1 ? 1.5 : 1.0,
         ),
@@ -358,15 +362,15 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade600,
+                    color: Colors.orange.shade600,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(LucideIcons.clipboardCheck, color: Colors.white, size: 12),
+                      Icon(LucideIcons.alertTriangle, color: Colors.white, size: 12),
                       SizedBox(width: 4),
-                      Text('Đã gửi báo cáo', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text('Chờ hoàn kho', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
                     ],
                   ),
                 ),
@@ -427,18 +431,18 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: Colors.orange.shade50,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.blue.shade200),
+                border: Border.all(color: Colors.orange.shade300),
               ),
               child: Row(
                 children: [
-                  Icon(LucideIcons.info, color: Colors.blue.shade700, size: 16),
+                  Icon(LucideIcons.alertTriangle, color: Colors.orange.shade700, size: 16),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Báo cáo kiểm đếm đã được gửi. Nhấn "Xác nhận hoàn kho" để hoàn tất việc trả thiết bị về kho.',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.blue.shade800),
+                      'Báo cáo đã gửi nhưng thiết bị CHƯA được nhập lại kho. Nhấn "Xác nhận hoàn kho" để hoàn tất — trạng thái sẽ đồng bộ về web.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.orange.shade900),
                     ),
                   ),
                 ],

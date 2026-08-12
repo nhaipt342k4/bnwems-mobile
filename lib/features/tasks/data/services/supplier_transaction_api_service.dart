@@ -39,4 +39,14 @@ class SupplierTransactionApiService {
     );
     return SupplierTransactionItem.fromJson(response);
   }
+
+  /// Xác nhận "đã nhận" cả giao dịch (Đã duyệt → Đã nhận). BE tự giới hạn: chỉ LEAD của đơn, chỉ khi
+  /// status=APPROVED, chặn nếu đã thanh toán. Trả về giao dịch đã cập nhật.
+  Future<SupplierTransaction> confirmReceived(String transactionId) async {
+    final response = await _apiClient.fetchData<Map<String, dynamic>>(
+      '/supplier-transactions/$transactionId/receive',
+      method: 'POST',
+    );
+    return SupplierTransaction.fromJson(response);
+  }
 }
