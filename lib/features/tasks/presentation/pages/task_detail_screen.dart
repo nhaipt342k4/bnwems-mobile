@@ -433,9 +433,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   items: _items,
                   isWarehouseConfirmed: _isWarehouseConfirmed || taskProvider.isWarehouseConfirmed(plan.planId) || plan.status == 'COMPLETED',
                   onConfirmWarehouseMovement: (notes) async {
+                    // Chỉ xuất phần KHO NỘI BỘ ròng (đã trừ phần thuê NCC) — phần thuê nhận riêng từ NCC,
+                    // không rời kho; bỏ item đã thuê đủ (internalNeed == 0).
                     final movementItems = _items
-                        .where((i) => i.source == null || i.source == 'INTERNAL')
-                        .map((i) => {'itemId': i.itemId, 'quantity': i.quantity})
+                        .where((i) => (i.source == null || i.source == 'INTERNAL') && i.internalNeed > 0)
+                        .map((i) => {'itemId': i.itemId, 'quantity': i.internalNeed})
                         .toList();
                     await taskProvider.warehouseMovement(plan.planId, movementItems, notes: notes);
                     if (mounted) {

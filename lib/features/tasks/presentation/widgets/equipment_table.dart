@@ -144,12 +144,25 @@ class _EquipmentTableState extends State<EquipmentTable> {
                     ],
                     rows: internalItems.map((item) {
                       final avail = item.quantityAvailable ?? item.quantity;
-                      final isSufficient = avail >= item.quantity;
+                      // So đủ/thiếu theo phần KHO NỘI BỘ ròng (đã trừ phần thuê NCC), không theo tổng đặt.
+                      final isSufficient = avail >= item.internalNeed;
                       return DataRow(
                         cells: [
                           DataCell(Text(item.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
                           DataCell(Text(item.unit, style: const TextStyle(fontSize: 12))),
-                          DataCell(Text('${item.quantity}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                          DataCell(
+                            item.quantityRented > 0
+                                ? Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('${item.quantity}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      Text('kho ${item.internalNeed} · thuê ${item.quantityRented}',
+                                          style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                                    ],
+                                  )
+                                : Text('${item.quantity}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
                           DataCell(
                             Text(
                               '$avail',

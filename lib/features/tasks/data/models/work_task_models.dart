@@ -49,6 +49,7 @@ class WorkTaskItem {
   final String name;
   final String unit;
   final int quantity;
+  final int quantityRented; // đã THUÊ NCC — đến từ NCC, không lấy từ kho nội bộ
   final int? quantityAvailable;
   final String? source; // 'INTERNAL' | 'SUPPLIER'
   final double rentalPrice;
@@ -58,10 +59,17 @@ class WorkTaskItem {
     required this.name,
     required this.unit,
     required this.quantity,
+    this.quantityRented = 0,
     this.quantityAvailable,
     this.source,
     this.rentalPrice = 0.0,
   });
+
+  /// Số cần lấy/xuất từ KHO NỘI BỘ = số đặt − số đã thuê NCC (kẹp ≥ 0). Phần thuê nhận riêng từ NCC.
+  int get internalNeed {
+    final n = quantity - quantityRented;
+    return n < 0 ? 0 : n;
+  }
 
   factory WorkTaskItem.fromJson(Map<String, dynamic> json) {
     return WorkTaskItem(
@@ -69,6 +77,7 @@ class WorkTaskItem {
       name: json['itemName']?.toString() ?? json['name']?.toString() ?? '',
       unit: json['unit']?.toString() ?? '',
       quantity: (json['quantityOrdered'] ?? json['quantity'] ?? 0) as int,
+      quantityRented: (json['quantityRented'] as num?)?.toInt() ?? 0,
       quantityAvailable: (json['quantityAvailable'] as num?)?.toInt(),
       source: json['source']?.toString(),
       rentalPrice: (json['rentalPrice'] as num?)?.toDouble() ?? 0.0,
