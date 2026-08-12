@@ -134,8 +134,8 @@ class _SettlementSectionState extends State<SettlementSection> {
       base = widget.orderTotalAmount - widget.depositCollected;
     }
 
-    final calculated = base + additionalFee + compensation - discount;
-    return calculated < 0 ? 0 : calculated;
+    // KHÔNG kẹp về 0: trả số CÓ DẤU — dương = còn phải THU THÊM của khách, ÂM = phải TRẢ LẠI khách.
+    return base + additionalFee + compensation - discount;
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
@@ -258,8 +258,25 @@ class _SettlementSectionState extends State<SettlementSection> {
   @override
   Widget build(BuildContext context) {
     final s = widget.existingSettlement;
-    final finalAmount = _finalAmountToDisplay;
+    final finalAmount = _finalAmountToDisplay; // CÓ DẤU: >0 thu thêm khách, <0 trả lại khách, =0 đủ
     final isPaid = s != null && s.status == 'PAID';
+    final absFinal = finalAmount.abs();
+    final String settleLabel;
+    final Color settleBg;
+    final Color settleFg;
+    if (finalAmount > 0) {
+      settleLabel = 'Cần thu thêm của khách';
+      settleBg = Colors.blue.shade50;
+      settleFg = Colors.blue.shade900;
+    } else if (finalAmount < 0) {
+      settleLabel = 'Phải TRẢ LẠI cho khách';
+      settleBg = Colors.orange.shade50;
+      settleFg = Colors.orange.shade900;
+    } else {
+      settleLabel = 'Đã đủ, không thu thêm';
+      settleBg = Colors.green.shade50;
+      settleFg = Colors.green.shade800;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,18 +421,18 @@ class _SettlementSectionState extends State<SettlementSection> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'TỔNG THANH TOÁN:',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                              s.finalAmount < 0 ? 'ĐÃ TRẢ LẠI KHÁCH:' : 'TỔNG THANH TOÁN:',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                             ),
                           ),
                           const SizedBox(width: 8),
                           FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              Formatters.formatCurrency(s.finalAmount),
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              Formatters.formatCurrency(s.finalAmount.abs()),
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: s.finalAmount < 0 ? Colors.orange.shade800 : AppColors.primary),
                             ),
                           ),
                         ],
@@ -478,8 +495,12 @@ class _SettlementSectionState extends State<SettlementSection> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    Formatters.formatCurrency(finalAmount),
-                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                                    Formatters.formatCurrency(absFinal),
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: settleFg),
+                                  ),
+                                  Text(
+                                    settleLabel,
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: settleFg),
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
@@ -518,89 +539,64 @@ class _SettlementSectionState extends State<SettlementSection> {
 
                       const SizedBox(height: 14),
 
-                      // 3 Inputs Row: Phụ thu phát sinh | Bồi thường hư hỏng/mất | Giảm trừ/Ưu đãi
+                      // 3 ô nhập — XẾP DỌC (trước để chung 1 Row nên chật, tràn chữ, vỡ UI trên màn hẹp).
+                      const Text('Phụ thu phát sinh', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _additionalFeeController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Phụ thu phát sinh', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
-                                const SizedBox(height: 4),
-                                TextField(
-                                  controller: _additionalFeeController,
-                                  keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                ),
-                              ],
+                          const Text('Bồi thường hư hỏng/mất', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                          if (widget.suggestedCompensation > 0 && widget.existingSettlement == null) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade100,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Đề xuất',
+                                style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Text('Bồi thường hư hỏng/mất', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
-                                    if (widget.suggestedCompensation > 0 && widget.existingSettlement == null) ...[
-                                      const SizedBox(width: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                        decoration: BoxDecoration(
-                                          color: Colors.orange.shade100,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'Đề xuất',
-                                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                TextField(
-                                  controller: _compensationController,
-                                  keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(
-                                        color: widget.suggestedCompensation > 0 && widget.existingSettlement == null
-                                            ? Colors.orange.shade400
-                                            : Colors.grey.shade400,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Giảm trừ/Ưu đãi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
-                                const SizedBox(height: 4),
-                                TextField(
-                                  controller: _discountController,
-                                  keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          ],
                         ],
+                      ),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _compensationController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: widget.suggestedCompensation > 0 && widget.existingSettlement == null
+                                  ? Colors.orange.shade400
+                                  : Colors.grey.shade400,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text('Giảm trừ/Ưu đãi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _discountController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
                       ),
 
                       const SizedBox(height: 12),
@@ -639,17 +635,18 @@ class _SettlementSectionState extends State<SettlementSection> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
+                          color: settleBg,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.blue.shade200),
+                          border: Border.all(color: settleFg.withValues(alpha: 0.25)),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Ước tính cần thu cuối:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.blue.shade900)),
+                            Flexible(child: Text('$settleLabel:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: settleFg))),
+                            const SizedBox(width: 8),
                             Text(
-                              Formatters.formatCurrency(finalAmount),
-                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                              Formatters.formatCurrency(absFinal),
+                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: settleFg),
                             ),
                           ],
                         ),
@@ -762,7 +759,7 @@ class _SettlementSectionState extends State<SettlementSection> {
         ),
 
         // Standalone VietQR Card below Form Container matching Manager Screen
-        if ((_paymentMethod == 'bank_transfer' || (s != null && s.paymentMethod == 'bank_transfer')) && !isPaid) ...[
+        if ((_paymentMethod == 'bank_transfer' || (s != null && s.paymentMethod == 'bank_transfer')) && !isPaid && finalAmount > 0) ...[
           const SizedBox(height: 16),
           VietQrWidget(
             amount: finalAmount.toDouble(),
