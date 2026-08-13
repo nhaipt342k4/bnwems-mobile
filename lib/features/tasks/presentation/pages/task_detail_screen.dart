@@ -61,6 +61,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
   // đây chỉ giữ 1 cái nên gửi 1 NCC là gom hết — giờ giữ CẢ DANH SÁCH để render theo từng giao dịch.
   List<CollectedEquipmentReport> _supplierCollectedReports = [];
   Settlement? _settlement;
+  List<String> _handoverEvidenceUrls = [];
   num _depositCollected = 0;
   double _suggestedCompensation = 0.0;
   bool _isWarehouseConfirmed = false;
@@ -112,6 +113,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
       _supplierService.listWithItems(plan.orderId).then((txs) {
         if (mounted) setState(() => _supplierTransactions = txs);
       }).catchError((_) {}).whenComplete(checkFinished);
+    }
+
+    // 2.5 Setup Handover Evidence (For SETUP)
+    if (plan.taskCode == 'SETUP' && plan.evidenceIds.isNotEmpty) {
+      pendingTasks++;
+      Future(() async {
+        final urls = <String>[];
+        for (final id in plan.evidenceIds) {
+          try {
+            urls.add((await _evidenceService.getById(id)).fileUrl);
+          } catch (_) {}
+        }
+        if (mounted) setState(() => _handoverEvidenceUrls = urls);
+      }).whenComplete(checkFinished);
     }
 
     // 3. Survey Report (For SURVEY)
@@ -464,6 +479,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                 const SizedBox(height: 16),
                 HandoverSection(
                   existingNotes: plan.notes,
+                  existingPhotoUrls: _handoverEvidenceUrls,
                   isAlreadySubmitted: taskProvider.isHandoverSubmitted(plan.planId),
                   onSubmit: (note, photoFiles) async {
                     // Upload TẤT CẢ ảnh biên bản rồi gắn cả mảng evidenceId vào lịch trong 1 lần gọi.

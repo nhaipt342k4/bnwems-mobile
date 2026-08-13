@@ -8,12 +8,14 @@ import '../../../../core/widgets/app_text_field.dart';
 
 class HandoverSection extends StatefulWidget {
   final String? existingNotes;
+  final List<String> existingPhotoUrls;
   final bool isAlreadySubmitted;
   final Future<void> Function(String note, List<File> photoFiles) onSubmit;
 
   const HandoverSection({
     super.key,
     this.existingNotes,
+    this.existingPhotoUrls = const [],
     this.isAlreadySubmitted = false,
     required this.onSubmit,
   });
@@ -34,15 +36,15 @@ class _HandoverSectionState extends State<HandoverSection> {
   void initState() {
     super.initState();
     _noteController = TextEditingController(text: widget.existingNotes ?? '');
-    // Nếu provider báo đã nộp thì khoá ngay từ đầu
-    _isSubmitted = widget.isAlreadySubmitted;
+    // Nếu provider báo đã nộp HOẶC đã có ảnh từ server thì khoá ngay từ đầu
+    _isSubmitted = widget.isAlreadySubmitted || widget.existingPhotoUrls.isNotEmpty;
   }
 
   @override
   void didUpdateWidget(covariant HandoverSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Khi parent rebuild và truyền isAlreadySubmitted = true thì khoá ngay
-    if (!_isSubmitted && widget.isAlreadySubmitted) {
+    // Khi parent rebuild và truyền isAlreadySubmitted = true hoặc có ảnh server thì khoá ngay
+    if (!_isSubmitted && (widget.isAlreadySubmitted || widget.existingPhotoUrls.isNotEmpty)) {
       setState(() => _isSubmitted = true);
     }
   }
@@ -288,7 +290,7 @@ class _HandoverSectionState extends State<HandoverSection> {
           const SizedBox(height: 8),
 
           // ---------- Ảnh: chỉ hiển thị danh sách khi đã nộp, không cho thêm/xoá ----------
-          if (!_isSubmitted && _photoFiles.isEmpty) ...[
+          if (!_isSubmitted && _photoFiles.isEmpty && widget.existingPhotoUrls.isEmpty) ...[
             InkWell(
               onTap: _showImagePickerOptions,
               borderRadius: BorderRadius.circular(12),
@@ -317,16 +319,15 @@ class _HandoverSectionState extends State<HandoverSection> {
                 ),
               ),
             ),
-          ] else if (_photoFiles.isNotEmpty) ...[
+          ] else if (_photoFiles.isNotEmpty || widget.existingPhotoUrls.isNotEmpty) ...[
             SizedBox(
               height: 110,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                // Khi đã nộp: không hiển thị ô "Thêm ảnh" nữa
-                itemCount: _isSubmitted ? _photoFiles.length : _photoFiles.length + 1,
+                itemCount: widget.existingPhotoUrls.length + _photoFiles.length + (_isSubmitted ? 0 : 1),
                 itemBuilder: (ctx, index) {
                   // Nút thêm ảnh (chỉ khi chưa nộp)
-                  if (!_isSubmitted && index == _photoFiles.length) {
+                  if (!_isSubmitted && index == widget.existingPhotoUrls.length + _photoFiles.length) {
                     return GestureDetector(
                       onTap: _showImagePickerOptions,
                       child: Container(
@@ -352,7 +353,10 @@ class _HandoverSectionState extends State<HandoverSection> {
                     );
                   }
 
-                  final file = _photoFiles[index];
+                  final isRemote = index < widget.existingPhotoUrls.length;
+                  final imageUrl = isRemote ? widget.existingPhotoUrls[index] : null;
+                  final file = !isRemote ? _photoFiles[index - widget.existingPhotoUrls.length] : null;
+
                   return Stack(
                     children: [
                       Container(
@@ -361,22 +365,20 @@ class _HandoverSectionState extends State<HandoverSection> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           image: DecorationImage(
-                            image: FileImage(file),
+                            image: (isRemote ? NetworkImage(imageUrl!) : FileImage(file!)) as ImageProvider,
                             fit: BoxFit.cover,
                           ),
-                          // Khi đã nộp: viền xanh lá để phân biệt
                           border: _isSubmitted
                               ? Border.all(color: Colors.green.shade400, width: 2)
                               : null,
                         ),
                       ),
-                      // Nút xoá: ẩn khi đã nộp
-                      if (!_isSubmitted)
+                      if (!_isSubmitted && !isRemote)
                         Positioned(
                           top: 4,
                           right: 14,
                           child: GestureDetector(
-                            onTap: () => _removePhoto(index),
+                            onTap: () => _removePhoto(index - widget.existingPhotoUrls.length),
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
@@ -387,7 +389,6 @@ class _HandoverSectionState extends State<HandoverSection> {
                             ),
                           ),
                         ),
-                      // Khi đã nộp: dấu tick nhỏ trên ảnh
                       if (_isSubmitted)
                         Positioned(
                           top: 4,
