@@ -19,34 +19,35 @@ class UpcomingEventAlert extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primaryLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        color: const Color(0xFFFFF9EE),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF0DFBD)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(LucideIcons.bell, size: 16, color: AppColors.primaryDark),
-              const SizedBox(width: 8),
+              Icon(LucideIcons.bell, size: 16, color: AppColors.goldPrimary),
+              SizedBox(width: 8),
               Text(
-                'SỰ KIỆN SẮP DIỄN RA (${plans.length})',
-                style: const TextStyle(
+                'SỰ KIỆN SẮP DIỄN RA HÔM NAY',
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primaryDark,
-                  letterSpacing: 0.5,
+                  color: AppColors.goldLabel,
+                  letterSpacing: 1.0,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           ...plans.take(2).map(
                 (plan) => InkWell(
                   onTap: () => context.push('/staff/tasks/${plan.planId}'),
+                  borderRadius: BorderRadius.circular(12),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
@@ -57,23 +58,26 @@ class UpcomingEventAlert extends StatelessWidget {
                             children: [
                               Text(
                                 plan.eventName ?? plan.taskName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 13.5,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.warmTextDark,
                                 ),
                               ),
+                              const SizedBox(height: 2),
                               Text(
                                 '${plan.orderCode} · ${Formatters.formatDate(plan.startTime)}',
                                 style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textSecondary,
+                                  fontSize: 11.5,
+                                  color: AppColors.warmTextMuted,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(LucideIcons.chevronRight, size: 16, color: AppColors.textMuted),
+                        const Icon(LucideIcons.chevronRight, size: 16, color: AppColors.warmTextMuted),
                       ],
                     ),
                   ),

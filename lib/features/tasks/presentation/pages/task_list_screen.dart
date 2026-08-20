@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../../../core/widgets/empty_state_widget.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
@@ -50,39 +49,78 @@ class _TaskListScreenState extends State<TaskListScreen> {
         .toList();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.warmBackground,
       body: SafeArea(
         child: RefreshIndicator(
+          color: AppColors.goldPrimary,
           onRefresh: () => taskProvider.loadMyPlans(),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(18.0),
             children: [
-              const AppHeader(
-                title: 'Công việc',
-                subtitle: 'Danh sách nhiệm vụ được giao',
+              // Header
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'CÔNG VIỆC',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.goldLabel,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Danh sách nhiệm vụ',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.warmTextDark,
+                      fontFamily: 'serif',
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
 
-              // Search bar
-              TextField(
-                controller: _searchController,
-                onChanged: (query) => taskProvider.setSearchQuery(query),
-                decoration: InputDecoration(
-                  hintText: 'Tìm theo tên việc, mã đơn, sự kiện...',
-                  prefixIcon: const Icon(LucideIcons.search, size: 18, color: AppColors.textMuted),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(LucideIcons.x, size: 16),
-                          onPressed: () {
-                            _searchController.clear();
-                            taskProvider.setSearchQuery('');
-                          },
-                        )
-                      : null,
+              // Search bar (Pill shape)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (query) => taskProvider.setSearchQuery(query),
+                  style: const TextStyle(fontSize: 14, color: AppColors.warmTextDark),
+                  decoration: InputDecoration(
+                    hintText: 'Tìm theo tên việc, mã đơn, sự kiện...',
+                    hintStyle: const TextStyle(fontSize: 13, color: AppColors.warmTextMuted),
+                    prefixIcon: const Icon(LucideIcons.search, size: 18, color: AppColors.goldPrimary),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(LucideIcons.x, size: 16, color: AppColors.warmTextMuted),
+                            onPressed: () {
+                              _searchController.clear();
+                              taskProvider.setSearchQuery('');
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
 
               // Horizontal Status Filters
               SizedBox(
@@ -94,27 +132,37 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   itemBuilder: (context, index) {
                     final filter = _statusFilters[index];
                     final isSelected = taskProvider.selectedStatusFilter == filter['key'];
-                    return ChoiceChip(
-                      label: Text(
-                        filter['label']!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                          color: isSelected ? Colors.white : AppColors.textSecondary,
+                    return GestureDetector(
+                      onTap: () => taskProvider.setStatusFilter(filter['key']!),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.goldPrimary : const Color(0xFFF7F2EA),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.goldPrimary.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Text(
+                          filter['label']!,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            color: isSelected ? Colors.white : AppColors.goldLabel,
+                          ),
                         ),
                       ),
-                      selected: isSelected,
-                      selectedColor: AppColors.primary,
-                      backgroundColor: AppColors.surface,
-                      side: BorderSide(
-                        color: isSelected ? AppColors.primary : AppColors.border,
-                      ),
-                      onSelected: (_) => taskProvider.setStatusFilter(filter['key']!),
                     );
                   },
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
               // Upcoming Event Alert
               UpcomingEventAlert(plans: upcomingPlans),
@@ -122,7 +170,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
               // Plans list
               if (taskProvider.isLoading) ...[
-                const AppLoadingIndicator(message: 'Đang nạp danh sách công việc...'),
+                const AppLoadingIndicator(message: 'Đang tải danh sách công việc...'),
               ] else if (filteredPlans.isEmpty) ...[
                 const EmptyStateWidget(
                   message: 'Không có kế hoạch nào phù hợp với bộ lọc.',
@@ -133,7 +181,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   (plan) {
                     final activePlan = user != null ? taskProvider.getActiveCheckedInPlan(user.id) : null;
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.only(bottom: 14),
                       child: CurrentTaskCard(
                         plan: plan,
                         myAssignee: user != null ? taskProvider.getMyAssignee(plan, user.id) : null,

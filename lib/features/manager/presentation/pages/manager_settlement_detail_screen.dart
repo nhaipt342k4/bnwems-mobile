@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
@@ -45,84 +47,153 @@ class _ManagerSettlementDetailScreenState extends State<ManagerSettlementDetailS
     super.dispose();
   }
 
+  String _cleanTitle(String? orderCode, String? rawName, String fallback) {
+    final code = (orderCode ?? '').trim();
+    var name = (rawName ?? fallback).trim();
+    if (code.isNotEmpty) {
+      name = name.replaceAll(RegExp(r'\s*[-·]\s*' + RegExp.escape(code), caseSensitive: false), '');
+      name = name.replaceAll(RegExp(r'^' + RegExp.escape(code) + r'\s*[-·]\s*', caseSensitive: false), '');
+      name = name.replaceAll(RegExp(r'\b' + RegExp.escape(code) + r'\b', caseSensitive: false), '');
+      name = name.replaceAll(RegExp(r'\s+'), ' ').trim();
+      name = name.replaceAll(RegExp(r'^[-·\s]+|[-·\s]+$'), '').trim();
+    }
+    return name.isNotEmpty ? name : 'Kịch bản sự kiện';
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ManagerSettlementProvider>();
     final order = provider.order;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.warmBackground,
       appBar: AppBar(
+        backgroundColor: AppColors.warmBackground,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: Container(
+          margin: const EdgeInsets.only(left: 14, top: 8, bottom: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: IconButton(
+            icon: const Icon(LucideIcons.arrowLeft, size: 20, color: Color(0xFF2C241E)),
+            padding: EdgeInsets.zero,
+            onPressed: () => context.pop(),
+          ),
+        ),
         title: Text(
           'Quyết toán — ${order?.orderCode ?? ''}',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C241E),
+            fontFamily: 'serif',
+          ),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0.5,
+        centerTitle: false,
       ),
       body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.goldPrimary))
           : provider.errorMessage != null
-              ? Center(child: Text(provider.errorMessage!, style: TextStyle(color: Colors.red.shade700)))
+              ? Center(child: Text(provider.errorMessage!, style: const TextStyle(color: Color(0xFFDC2626))))
               : order == null
-                  ? const Center(child: Text('Không tìm thấy dữ liệu đơn hàng.'))
+                  ? const Center(child: Text('Không tìm thấy dữ liệu đơn hàng.', style: TextStyle(color: AppColors.warmTextMuted)))
                   : SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(18),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header Dark Card
+                          // 1. Order Summary Card (Vibrant Warm Gold Gradient)
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0F172A),
-                              borderRadius: BorderRadius.circular(16),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFC59B63), Color(0xFFA87E46)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(22),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFC59B63).withValues(alpha: 0.25),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(order.orderCode, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400)),
-                                const SizedBox(height: 4),
                                 Text(
-                                  order.eventName ?? order.customerName,
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                  order.orderCode,
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFE2D5C5)),
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _cleanTitle(order.orderCode, order.eventName, order.customerName),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
                                 Text(
                                   '${order.customerName} · ${Formatters.formatDate(order.eventDate)}',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                                  style: const TextStyle(fontSize: 13, color: Color(0xFFD6C5B3)),
                                 ),
-                                const SizedBox(height: 12),
-                                const Divider(color: Colors.white24, height: 1),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 14),
+                                const SettlementDottedLine(),
+                                const SizedBox(height: 14),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('Tổng giá trị đơn', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
-                                    Text(Formatters.formatCurrency(order.totalAmount), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                                    const Text('TỔNG GIÁ TRỊ ĐƠN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB8A594), letterSpacing: 0.5)),
+                                    Text(
+                                      Formatters.formatCurrency(order.totalAmount),
+                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFF3D084)),
+                                    ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 6),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('Đã thu cọc', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
-                                    Text(Formatters.formatCurrency(provider.depositCollected), style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green.shade400)),
+                                    const Text('ĐÃ THU CỌC', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB8A594), letterSpacing: 0.5)),
+                                    Text(
+                                      Formatters.formatCurrency(provider.depositCollected),
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF4ADE80)),
+                                    ),
                                   ],
                                 ),
                               ],
                             ),
                           ),
 
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 18),
 
-                          // Settlement Form
+                          // 2. Settlement Form Card
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.borderLight),
+                              borderRadius: BorderRadius.circular(22),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,205 +201,175 @@ class _ManagerSettlementDetailScreenState extends State<ManagerSettlementDetailS
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: const BoxDecoration(color: Color(0xFF6366F1), shape: BoxShape.circle),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        const Text('Hồ sơ quyết toán cuối kỳ', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                                      ],
+                                    const Text(
+                                      'Hồ sơ quyết toán',
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2C241E)),
                                     ),
                                     if (provider.settlement != null)
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: provider.isConfirmed ? Colors.green.shade50 : Colors.amber.shade50,
-                                          borderRadius: BorderRadius.circular(8),
+                                          color: provider.isConfirmed ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                                          borderRadius: BorderRadius.circular(14),
                                         ),
                                         child: Text(
                                           Formatters.formatPaymentStatus(provider.settlement!.status),
-                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: provider.isConfirmed ? Colors.green.shade800 : Colors.amber.shade800),
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: provider.isConfirmed ? const Color(0xFF16A34A) : const Color(0xFFD97706),
+                                          ),
                                         ),
                                       ),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 16),
 
-                                // Top Summary Box inside card matching mockup
-                                Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'SỐ TIỀN QUYẾT TOÁN CUỐI',
-                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              Formatters.formatCurrency(provider.finalAmountToDisplay),
-                                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                                            ),
-                                            const SizedBox(height: 12),
-                                            Text(
-                                              'NGÀY XÁC NHẬN',
-                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              provider.settlement?.paidAt != null && provider.settlement!.paidAt!.isNotEmpty
-                                                  ? Formatters.formatDate(provider.settlement!.paidAt!)
-                                                  : '—',
-                                              style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'PHƯƠNG THỨC',
-                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              provider.paymentMethod == 'cash' ? 'Tiền mặt' : 'Chuyển khoản Ngân hàng',
-                                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
+                                const Text('Chi phí phát sinh (VNĐ)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF2C241E))),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: _additionalFeeController,
+                                  keyboardType: TextInputType.number,
+                                  enabled: !provider.isConfirmed,
+                                  onChanged: (val) => provider.setAdditionalFee(val),
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2C241E)),
+                                  decoration: InputDecoration(
+                                    hintText: '0',
+                                    hintStyle: const TextStyle(color: AppColors.warmTextMuted, fontSize: 14),
+                                    suffixText: 'đ',
+                                    suffixStyle: const TextStyle(color: AppColors.goldPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: Color(0xFFEFE8DC)),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: Color(0xFFEFE8DC)),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: AppColors.goldPrimary, width: 1.5),
+                                    ),
                                   ),
                                 ),
 
                                 const SizedBox(height: 14),
 
-                                // 3 Inputs in a Row
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text('Phụ thu phát sinh', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
-                                          const SizedBox(height: 4),
-                                          TextField(
-                                            controller: _additionalFeeController,
-                                            keyboardType: TextInputType.number,
-                                            enabled: !provider.isConfirmed,
-                                            onChanged: (val) => provider.setAdditionalFee(val),
-                                            decoration: InputDecoration(
-                                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text('Bồi thường hư hỏng/mất', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
-                                          const SizedBox(height: 4),
-                                          TextField(
-                                            controller: _compensationController,
-                                            keyboardType: TextInputType.number,
-                                            enabled: !provider.isConfirmed,
-                                            onChanged: (val) => provider.setCompensation(val),
-                                            decoration: InputDecoration(
-                                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text('Giảm trừ/Ưu đãi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
-                                          const SizedBox(height: 4),
-                                          TextField(
-                                            controller: _discountController,
-                                            keyboardType: TextInputType.number,
-                                            enabled: !provider.isConfirmed,
-                                            onChanged: (val) => provider.setDiscount(val),
-                                            decoration: InputDecoration(
-                                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                const SizedBox(height: 12),
-
-                                const Text('Phương thức thanh toán', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
-                                const SizedBox(height: 4),
-                                DropdownButtonFormField<String>(
-                                  value: provider.paymentMethod == 'cash' ? 'cash' : 'bank_transfer',
+                                const Text('Tiền bồi thường hỏng hóc (VNĐ)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF2C241E))),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: _compensationController,
+                                  keyboardType: TextInputType.number,
+                                  enabled: !provider.isConfirmed,
+                                  onChanged: (val) => provider.setCompensation(val),
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2C241E)),
                                   decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    hintText: '0',
+                                    hintStyle: const TextStyle(color: AppColors.warmTextMuted, fontSize: 14),
+                                    suffixText: 'đ',
+                                    suffixStyle: const TextStyle(color: AppColors.goldPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: Color(0xFFEFE8DC)),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: Color(0xFFEFE8DC)),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: AppColors.goldPrimary, width: 1.5),
+                                    ),
                                   ),
-                                  items: const [
-                                    DropdownMenuItem(value: 'bank_transfer', child: Text('Chuyển khoản Ngân hàng')),
-                                    DropdownMenuItem(value: 'cash', child: Text('Tiền mặt')),
-                                  ],
-                                  onChanged: provider.isConfirmed ? null : (val) => provider.setPaymentMethod(val ?? 'bank_transfer'),
                                 ),
 
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 14),
 
-                                const Text('Ghi chú', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
-                                const SizedBox(height: 4),
+                                const Text('Chiết khấu / Giảm giá (VNĐ)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF2C241E))),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: _discountController,
+                                  keyboardType: TextInputType.number,
+                                  enabled: !provider.isConfirmed,
+                                  onChanged: (val) => provider.setDiscount(val),
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2C241E)),
+                                  decoration: InputDecoration(
+                                    hintText: '0',
+                                    hintStyle: const TextStyle(color: AppColors.warmTextMuted, fontSize: 14),
+                                    suffixText: 'đ',
+                                    suffixStyle: const TextStyle(color: AppColors.goldPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: Color(0xFFEFE8DC)),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: Color(0xFFEFE8DC)),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: AppColors.goldPrimary, width: 1.5),
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 14),
+
+                                const Text('Ghi chú quyết toán', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF2C241E))),
+                                const SizedBox(height: 6),
                                 TextField(
                                   controller: _notesController,
                                   enabled: !provider.isConfirmed,
                                   maxLines: 2,
                                   onChanged: (val) => provider.setNotes(val),
+                                  style: const TextStyle(fontSize: 14, color: Color(0xFF2C241E)),
                                   decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    hintText: 'Nhập ghi chú...',
+                                    hintStyle: const TextStyle(color: AppColors.warmTextMuted, fontSize: 13.5),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.all(14),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: Color(0xFFEFE8DC)),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: Color(0xFFEFE8DC)),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(color: AppColors.goldPrimary, width: 1.5),
+                                    ),
                                   ),
                                 ),
 
-                                const SizedBox(height: 14),
+                                const SizedBox(height: 16),
 
+                                // Soft Amber Highlight Card
                                 Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
-                                    borderRadius: BorderRadius.circular(10),
+                                    color: const Color(0xFFFFF9EE),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: const Color(0xFFF0DFBD)),
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text('Ước tính cần thu cuối:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.blue.shade900)),
+                                      const Text('Số tiền quyết toán cần thu', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF5C4E43))),
                                       Text(
                                         Formatters.formatCurrency(provider.finalAmountToDisplay),
-                                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFC59B63)),
                                       ),
                                     ],
                                   ),
@@ -336,55 +377,49 @@ class _ManagerSettlementDetailScreenState extends State<ManagerSettlementDetailS
 
                                 if (provider.formError != null) ...[
                                   const SizedBox(height: 8),
-                                  Text(provider.formError!, style: TextStyle(color: Colors.red.shade700, fontSize: 13)),
+                                  Text(provider.formError!, style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13)),
                                 ],
 
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 18),
 
                                 if (!provider.isConfirmed)
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: ElevatedButton(
+                                        child: OutlinedButton(
                                           onPressed: provider.isSaving ? null : () => provider.saveSettlement(widget.orderId),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.primary,
-                                            minimumSize: const Size.fromHeight(44),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          style: OutlinedButton.styleFrom(
+                                            minimumSize: const Size.fromHeight(48),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            side: const BorderSide(color: Color(0xFFC59B63)),
                                           ),
                                           child: provider.isSaving
-                                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                              : const Text('Cập nhật biên bản quyết toán', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFC59B63)))
+                                              : const Text('Lưu hồ sơ', style: TextStyle(color: Color(0xFFC59B63), fontWeight: FontWeight.bold)),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: 12),
                                       Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: (provider.settlement == null || provider.isConfirming)
+                                        child: ElevatedButton(
+                                          onPressed: (provider.isConfirming || provider.isSaving)
                                               ? null
-                                              : () => provider.confirmSettlement(widget.orderId),
-                                          style: OutlinedButton.styleFrom(
-                                            backgroundColor: const Color(0xFFF1F5F9),
-                                            minimumSize: const Size.fromHeight(44),
-                                            side: const BorderSide(color: AppColors.borderLight),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                              : () async {
+                                                  if (provider.settlement == null) {
+                                                    final ok = await provider.saveSettlement(widget.orderId);
+                                                    if (ok) await provider.confirmSettlement(widget.orderId);
+                                                  } else {
+                                                    await provider.confirmSettlement(widget.orderId);
+                                                  }
+                                                },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.goldPrimary,
+                                            elevation: 0,
+                                            minimumSize: const Size.fromHeight(48),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                           ),
                                           child: provider.isConfirming
-                                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                              : const Row(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                  children: [
-                                                    Icon(Icons.check, size: 16, color: AppColors.textPrimary),
-                                                    SizedBox(width: 4),
-                                                    Flexible(
-                                                      child: Text(
-                                                        'Xác nhận thu nốt & Quyết toán',
-                                                        style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 12),
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
+                                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                              : const Text('Xác nhận đã thu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                         ),
                                       ),
                                     ],
@@ -393,10 +428,10 @@ class _ManagerSettlementDetailScreenState extends State<ManagerSettlementDetailS
                             ),
                           ),
 
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 18),
 
-                          // VietQR Card
-                          if (!provider.isConfirmed && provider.finalAmountToDisplay > 0)
+                          // 3. VietQR Card
+                          if (provider.finalAmountToDisplay > 0)
                             VietQrWidget(
                               amount: provider.finalAmountToDisplay,
                               addInfo: '${order.orderCode} QUYET TOAN',
@@ -404,6 +439,35 @@ class _ManagerSettlementDetailScreenState extends State<ManagerSettlementDetailS
                         ],
                       ),
                     ),
+    );
+  }
+}
+
+class SettlementDottedLine extends StatelessWidget {
+  const SettlementDottedLine({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final boxWidth = constraints.constrainWidth();
+        const dashWidth = 4.0;
+        const dashHeight = 1.0;
+        final dashCount = (boxWidth / (2 * dashWidth)).floor();
+        return Flex(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          direction: Axis.horizontal,
+          children: List.generate(dashCount, (_) {
+            return const SizedBox(
+              width: dashWidth,
+              height: dashHeight,
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: Color(0xFF6E5644)),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

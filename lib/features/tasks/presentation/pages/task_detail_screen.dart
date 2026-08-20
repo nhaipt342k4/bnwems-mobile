@@ -3,10 +3,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../../core/widgets/app_badge.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_loading_indicator.dart';
-import '../../../../core/widgets/app_role_badge.dart';
 import '../../../authentication/data/models/auth_user.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
 import '../../data/models/work_task_models.dart';
@@ -57,8 +55,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
   SurveyReport? _surveyReport;
   FieldPaymentRecord? _fieldPayment;
   CollectedEquipmentReport? _internalCollectedReport;
-  // Nhiều NCC → nhiều báo cáo thu hồi SUPPLIER (mỗi giao dịch 1 báo cáo, khớp theo transactionId). Trước
-  // đây chỉ giữ 1 cái nên gửi 1 NCC là gom hết — giờ giữ CẢ DANH SÁCH để render theo từng giao dịch.
   List<CollectedEquipmentReport> _supplierCollectedReports = [];
   Settlement? _settlement;
   List<String> _handoverEvidenceUrls = [];
@@ -107,7 +103,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
       }).catchError((_) {}).whenComplete(checkFinished);
     }
 
-    // 2. Supplier Transactions (SETUP: nhận đồ NCC; COLLECT: báo cáo thu hồi đồ NCC)
+    // 2. Supplier Transactions
     if (plan.taskCode == 'SETUP' || plan.taskCode == 'COLLECT') {
       pendingTasks++;
       _supplierService.listWithItems(plan.orderId).then((txs) {
@@ -115,7 +111,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
       }).catchError((_) {}).whenComplete(checkFinished);
     }
 
-    // 2.5 Setup Handover Evidence (For SETUP)
+    // 2.5 Setup Handover Evidence
     if (plan.taskCode == 'SETUP' && plan.evidenceIds.isNotEmpty) {
       pendingTasks++;
       Future(() async {
@@ -129,7 +125,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
       }).whenComplete(checkFinished);
     }
 
-    // 3. Survey Report (For SURVEY)
+    // 3. Survey Report
     if (plan.taskCode == 'SURVEY') {
       pendingTasks++;
       _surveyService.listByPlanId(plan.planId).then((surveyRows) async {
@@ -152,7 +148,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
         }
       }).catchError((_) {}).whenComplete(checkFinished);
 
-      // 3b. Cọc hiện trường đã ghi nhận (nếu có) — hiện lại ở FieldPaymentSection
       pendingTasks++;
       _depositService.list(plan.orderId).then((deposits) async {
         if (deposits.isNotEmpty) {
@@ -171,7 +166,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
       }).catchError((_) {}).whenComplete(checkFinished);
     }
 
-    // 4. Collected Reports (For COLLECT)
+    // 4. Collected Reports
     if (plan.taskCode == 'COLLECT') {
       pendingTasks++;
       _collectedService.listByOrderId(plan.orderId).then((reports) {
@@ -186,13 +181,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
         }
       }).catchError((_) {}).whenComplete(checkFinished);
 
-      // 5. Settlement (For COLLECT)
       pendingTasks++;
       _settlementService.getByOrderId(plan.orderId).then((settlement) {
         if (mounted) setState(() => _settlement = settlement);
       }).catchError((_) {}).whenComplete(checkFinished);
 
-      // 6. Deposits (For COLLECT)
       pendingTasks++;
       _depositService.list(plan.orderId).then((deposits) {
         if (mounted) {
@@ -226,8 +219,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
@@ -245,18 +236,47 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
     final isLead = myAssignee?.role == 'LEAD';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.warmBackground,
       appBar: AppBar(
-        title: Text(plan.taskName),
-        leading: IconButton(
-          icon: const Icon(LucideIcons.chevronLeft),
-          onPressed: () => Navigator.of(context).pop(),
+        backgroundColor: AppColors.warmBackground,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          plan.taskName,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w400,
+            color: AppColors.warmTextDark,
+            fontFamily: 'serif',
+          ),
+        ),
+        leading: Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: IconButton(
+            icon: const Icon(LucideIcons.chevronLeft, size: 18, color: Color(0xFF8C7355)),
+            padding: EdgeInsets.zero,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
         ),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textMuted,
-          indicatorColor: AppColors.primary,
+          labelColor: AppColors.goldPrimary,
+          unselectedLabelColor: const Color(0xFF8C7355),
+          indicatorColor: AppColors.goldPrimary,
+          indicatorWeight: 2.5,
+          labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           tabs: const [
             Tab(text: 'Tổng quan'),
             Tab(text: 'Thành viên'),
@@ -302,13 +322,23 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Plan Info Header Card
+            // Hero Task Header Card (Vibrant Warm Gold Gradient)
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderLight),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFC59B63), Color(0xFFA87E46)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFC59B63).withValues(alpha: 0.25),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,30 +346,58 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(plan.planCode, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
-                      AppBadge(
-                        label: Formatters.formatStatus(plan.status),
-                        backgroundColor: AppColors.primaryLight,
-                        textColor: AppColors.primaryDark,
+                      Text(
+                        plan.planCode,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFF7EEDD)),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF9EE),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          Formatters.formatStatus(plan.status),
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF8C7355),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(plan.taskName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  Text(
+                    plan.taskName,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'serif'),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Đơn hàng: ${plan.orderCode}${plan.eventName != null ? ' · ${plan.eventName}' : ''}', style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  Text(
+                    'Đơn hàng: ${Formatters.formatOrderEvent(plan.orderCode, plan.eventName)}',
+                    style: const TextStyle(fontSize: 13.5, color: Color(0xFFFDE68A), fontWeight: FontWeight.bold),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Divider(height: 1, color: Color(0xFFD9B687)),
+                  ),
+                  _buildIconDetail(LucideIcons.user, 'Khách hàng', '${plan.customerName} (${plan.customerPhone})', isDarkCard: true),
                   const SizedBox(height: 12),
-                  _buildIconDetail(LucideIcons.user, 'Khách hàng', '${plan.customerName} (${plan.customerPhone})'),
-                  const SizedBox(height: 6),
                   _buildIconDetail(
                     LucideIcons.mapPin,
                     'Địa chỉ hiện trường',
                     plan.location != null && plan.location!.trim().isNotEmpty
                         ? plan.location!
                         : (plan.customerAddress.isNotEmpty ? plan.customerAddress : 'Chưa có địa chỉ'),
+                    isDarkCard: true,
                   ),
-                  const SizedBox(height: 6),
-                  _buildIconDetail(LucideIcons.clock, 'Thời gian', '${Formatters.formatDateTime(plan.startTime)}${plan.endTime != null ? ' - ${Formatters.formatTime(plan.endTime)}' : ''}'),
+                  const SizedBox(height: 12),
+                  _buildIconDetail(
+                    LucideIcons.clock,
+                    'Thời gian',
+                    '${Formatters.formatDateTime(plan.startTime)}${plan.endTime != null ? ' - ${Formatters.formatTime(plan.endTime)}' : ''}',
+                    isDarkCard: true,
+                  ),
                 ],
               ),
             ),
@@ -348,16 +406,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
             // Confirm Plan action for LEAD role when PENDING
             if (isLead && plan.status == 'PENDING') ...[
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: AppColors.inProgressBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.inProgressText.withValues(alpha: 0.3)),
+                  color: const Color(0xFFFFF9EE),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFFF0DFBD)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Kế hoạch đang chờ xác nhận từ Trưởng nhóm', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.inProgressText)),
+                    const Text('Kế hoạch đang chờ xác nhận từ Trưởng nhóm', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF8C7355))),
                     const SizedBox(height: 8),
                     if (_confirmError != null) ...[
                       Text(_confirmError!, style: const TextStyle(fontSize: 12, color: AppColors.cancelledText)),
@@ -375,8 +433,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
               const SizedBox(height: 16),
             ],
 
-
-
             if (_isLoadingSubData) ...[
               const AppLoadingIndicator(message: 'Đang tải thông tin chi tiết hạng mục...'),
             ] else ...[
@@ -388,7 +444,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   planStatus: plan.status,
                   isSubmitted: taskProvider.isSurveySubmitted(plan.planId),
                   onSubmit: (input) async {
-                    // Upload TẤT CẢ ảnh khảo sát; giữ mọi evidenceId để lưu vào báo cáo (không bỏ ảnh phụ).
                     final evidenceIds = <String>[];
                     final primaryEv = await _evidenceService.upload(input.primaryPhoto);
                     evidenceIds.add(primaryEv.evidenceId);
@@ -419,7 +474,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   },
                 ),
                 const SizedBox(height: 16),
-                // Thu cọc hiện trường (Leader ghi nhận; Manager xác nhận PAID trên web → đơn CONFIRMED + giữ chỗ thiết bị)
                 FieldPaymentSection(
                   existingPayment: _fieldPayment,
                   onSubmit: (input) async {
@@ -447,8 +501,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   items: _items,
                   isWarehouseConfirmed: _isWarehouseConfirmed || taskProvider.isWarehouseConfirmed(plan.planId) || plan.status == 'COMPLETED',
                   onConfirmWarehouseMovement: (notes) async {
-                    // Chỉ xuất phần KHO NỘI BỘ ròng (đã trừ phần thuê NCC) — phần thuê nhận riêng từ NCC,
-                    // không rời kho; bỏ item đã thuê đủ (internalNeed == 0).
                     final movementItems = _items
                         .where((i) => (i.source == null || i.source == 'INTERNAL') && i.internalNeed > 0)
                         .map((i) => {'itemId': i.itemId, 'quantity': i.internalNeed})
@@ -474,15 +526,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     await _loadData();
                   },
                 ),
-
-
                 const SizedBox(height: 16),
                 HandoverSection(
                   existingNotes: plan.notes,
                   existingPhotoUrls: _handoverEvidenceUrls,
                   isAlreadySubmitted: taskProvider.isHandoverSubmitted(plan.planId),
                   onSubmit: (note, photoFiles) async {
-                    // Upload TẤT CẢ ảnh biên bản rồi gắn cả mảng evidenceId vào lịch trong 1 lần gọi.
                     final evidenceIds = <String>[];
                     for (final photo in photoFiles) {
                       final ev = await _evidenceService.upload(
@@ -499,7 +548,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   },
                 ),
                 const SizedBox(height: 16),
-                // Gửi yêu cầu đổi/bổ sung/bớt thiết bị phát sinh tại hiện trường → Manager duyệt
                 OutlinedButton.icon(
                   onPressed: () => ChangeRequestFormSheet.show(
                     context,
@@ -521,8 +569,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   existingSupplierReports: _supplierCollectedReports,
                   items: _items,
                   supplierTransactions: _supplierTransactions,
-                  // Trạng thái "đã hoàn kho" lấy từ SERVER (report.status=CONFIRMED) để đồng bộ với web,
-                  // không dùng cờ local SharedPreferences (chỉ nằm trên 1 máy, web không thấy).
                   isWarehouseConfirmed: _internalCollectedReport?.status == 'CONFIRMED',
                   onCompensationChanged: (suggested) {
                     if (mounted && _suggestedCompensation != suggested) {
@@ -530,7 +576,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     }
                   },
                   onSubmit: (input) async {
-                    // Upload ảnh minh chứng kiểm đếm (hỏng/mất) rồi gửi kèm evidenceIds.
                     final evidenceIds = <String>[];
                     for (final photo in input.photoFiles) {
                       try {
@@ -551,11 +596,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     await _loadData();
                   },
                   onConfirmWarehouse: () async {
-                    // Xác nhận hoàn kho = DUYỆT báo cáo thu hồi:
-                    // PUT /inventory/collected-equipment-reports/:reportId/confirm → BE đặt status=CONFIRMED
-                    // + tạo phiếu NHẬP kho (INBOUND). TRƯỚC ĐÂY gọi nhầm warehouseMovement (endpoint XUẤT kho
-                    // của ngày lắp đặt) + cờ local nên web không đổi trạng thái. Giờ web & mobile cùng đọc
-                    // report.status nên đồng bộ.
                     final report = _internalCollectedReport;
                     if (report == null) return;
                     await _collectedService.confirm(report.reportId);
@@ -612,46 +652,134 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
 
   Widget _buildAssigneesTab(SchedulePlan plan) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       children: [
-        Text('Danh sách phân công (${plan.assignees.length} nhân sự)', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        ...plan.assignees.map(
-          (assignee) => Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
+        Text.rich(
+          TextSpan(
+            text: 'Danh sách phân công ',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.warmTextDark,
+            ),
+            children: [
+              TextSpan(
+                text: '(${plan.assignees.length} nhân sự)',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.normal,
+                  color: AppColors.warmTextMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        ...plan.assignees.map((assignee) {
+          final isLead = assignee.role == 'LEAD';
+          final roleLabel = Formatters.formatRole(assignee.role);
+
+          String checkInStr = 'Chưa check-in';
+          if (assignee.isCheckedIn && assignee.checkInAt != null && assignee.checkInAt!.isNotEmpty) {
+            try {
+              final dt = Formatters.parseVietnamDateTime(assignee.checkInAt!);
+              final hh = dt.hour.toString().padLeft(2, '0');
+              final mm = dt.minute.toString().padLeft(2, '0');
+              final dd = dt.day.toString().padLeft(2, '0');
+              final mon = dt.month.toString().padLeft(2, '0');
+              final yyyy = dt.year.toString();
+              checkInStr = 'Check-in: $hh:$mm - $dd/$mon/$yyyy';
+            } catch (_) {
+              checkInStr = 'Check-in: ${assignee.checkInAt}';
+            }
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.borderLight),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 16,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: AppColors.primaryLight,
-                  child: Text(Formatters.getInitial(assignee.fullName), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+                // Avatar circle
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isLead ? const Color(0xFFF3E8FF) : const Color(0xFFF5EAD8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      Formatters.getInitial(assignee.fullName),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isLead ? const Color(0xFF7E22CE) : const Color(0xFF8C7355),
+                        fontSize: 18,
+                        fontFamily: 'serif',
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Text(assignee.fullName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                          Text(
+                            assignee.fullName,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.warmTextDark,
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          AppRoleBadge(roleName: assignee.role),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isLead ? const Color(0xFFF3E8FF) : const Color(0xFFF7F2EA),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isLead ? const Color(0xFFE9D5FF) : const Color(0xFFEFE8DC),
+                              ),
+                            ),
+                            child: Text(
+                              roleLabel,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isLead ? const Color(0xFF7E22CE) : const Color(0xFF8C7456),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                      if (assignee.phone != null) Text(assignee.phone!, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                      if (assignee.phone != null && assignee.phone!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          assignee.phone!,
+                          style: const TextStyle(fontSize: 13, color: AppColors.warmTextMuted),
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Text(
-                        assignee.isCheckedIn
-                            ? 'Check-in: ${Formatters.formatDateTime(assignee.checkInAt)}'
-                            : 'Chưa check-in',
+                        checkInStr,
                         style: TextStyle(
-                          fontSize: 11,
-                          color: assignee.isCheckedIn ? AppColors.completedText : AppColors.textMuted,
+                          fontSize: 12.5,
+                          color: assignee.isCheckedIn ? const Color(0xFF16A34A) : AppColors.warmTextMuted,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -660,8 +788,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                 ),
               ],
             ),
-          ),
-        ),
+          );
+        }),
       ],
     );
   }
@@ -673,25 +801,42 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
     final hasOtherActivePlan = activePlan != null && activePlan.planId != plan.planId;
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderLight),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 16,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Trạng thái điểm danh cá nhân', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
+                const Text(
+                  'Trạng thái điểm danh cá nhân',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.warmTextDark,
+                  ),
+                ),
+                const SizedBox(height: 14),
                 _buildAttendanceRow('Check-in:', isCheckedIn ? Formatters.formatDateTime(myAssignee!.checkInAt) : 'Chưa điểm danh', isCheckedIn),
-                const SizedBox(height: 8),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(height: 1, color: Color(0xFFF0E8DC)),
+                ),
                 _buildAttendanceRow('Check-out:', isCheckedOut ? Formatters.formatDateTime(myAssignee!.checkOutAt) : 'Chưa check-out', isCheckedOut),
               ],
             ),
@@ -702,11 +847,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
             if (hasOtherActivePlan) ...[
               Container(
                 width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 10),
+                margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Colors.amber.shade300),
                 ),
                 child: Row(
@@ -716,95 +861,125 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     Expanded(
                       child: Text(
                         'Bạn không được check-in khi chưa hoàn thành (check-out) công việc "${activePlan.taskName}" (${activePlan.planCode}).',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
                       ),
                     ),
                   ],
                 ),
               ),
             ],
-            AppButton(
-              text: hasOtherActivePlan ? 'Nút Check-in đã bị khóa' : 'Điểm danh Check-in hiện trường',
-              isFullWidth: true,
-              variant: hasOtherActivePlan ? AppButtonVariant.secondary : AppButtonVariant.primary,
-              onPressed: () {
-                if (hasOtherActivePlan) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Bạn không được check-in khi chưa hoàn thành công việc "${activePlan.taskName}" (${activePlan.planCode}).'),
-                      backgroundColor: Colors.red.shade700,
-                      duration: const Duration(seconds: 4),
-                    ),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (hasOtherActivePlan) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Bạn không được check-in khi chưa hoàn thành công việc "${activePlan.taskName}" (${activePlan.planCode}).'),
+                        backgroundColor: Colors.red.shade700,
+                        duration: const Duration(seconds: 4),
+                      ),
+                    );
+                    return;
+                  }
+                  CheckInModalBottomSheet.show(
+                    context,
+                    taskName: plan.taskName,
+                    locationName: plan.location,
+                    targetLatitude: plan.latitude,
+                    targetLongitude: plan.longitude,
+                    onConfirmCheckIn: (photoFile, lat, lng) async {
+                      String? evidenceId;
+                      try {
+                        final ev = await _evidenceService.upload(photoFile);
+                        evidenceId = ev.evidenceId;
+                      } catch (_) {}
+                      if (context.mounted) {
+                        await context.read<TaskProvider>().checkIn(
+                          plan.planId,
+                          user.id,
+                          checkInEvidenceId: evidenceId,
+                          latitude: lat,
+                          longitude: lng,
+                        );
+                      }
+                    },
                   );
-                  return;
-                }
-                CheckInModalBottomSheet.show(
-                  context,
-                  taskName: plan.taskName,
-                  locationName: plan.location,
-                  targetLatitude: plan.latitude,
-                  targetLongitude: plan.longitude,
-                  onConfirmCheckIn: (photoFile, lat, lng) async {
-                    String? evidenceId;
-                    try {
-                      final ev = await _evidenceService.upload(photoFile);
-                      evidenceId = ev.evidenceId;
-                    } catch (_) {}
-                    if (context.mounted) {
-                      await context.read<TaskProvider>().checkIn(
-                        plan.planId,
-                        user.id,
-                        checkInEvidenceId: evidenceId,
-                        latitude: lat,
-                        longitude: lng,
-                      );
-                    }
-                  },
-                );
-              },
+                },
+                icon: Icon(hasOtherActivePlan ? LucideIcons.lock : LucideIcons.checkCircle2, size: 18),
+                label: Text(
+                  hasOtherActivePlan ? 'Nút Check-in đã bị khóa' : 'Điểm danh Check-in hiện trường',
+                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: hasOtherActivePlan ? Colors.grey.shade300 : AppColors.goldPrimary,
+                  foregroundColor: hasOtherActivePlan ? Colors.grey.shade700 : Colors.white,
+                  elevation: 2,
+                  shadowColor: AppColors.goldPrimary.withValues(alpha: 0.3),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                ),
+              ),
             ),
           ] else if (isCheckedIn && !isCheckedOut && user != null) ...[
-            AppButton(
-              text: 'Xác nhận Check-out rời vị trí',
-              isFullWidth: true,
-              variant: AppButtonVariant.secondary,
-              onPressed: () async {
-                try {
-                  await context.read<TaskProvider>().checkOut(plan.planId, user.id);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Check-out thành công!'),
-                        backgroundColor: AppColors.completedText,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    final cleanMsg = e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', '');
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        title: const Row(
-                          children: [
-                            Icon(LucideIcons.alertTriangle, color: AppColors.cancelledText, size: 22),
-                            SizedBox(width: 8),
-                            Text('Chưa thể Check-out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    await context.read<TaskProvider>().checkOut(plan.planId, user.id);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Check-out thành công!'),
+                          backgroundColor: Color(0xFF16A34A),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      final cleanMsg = e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', '');
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          title: const Row(
+                            children: [
+                              Icon(LucideIcons.alertTriangle, color: AppColors.cancelledText, size: 22),
+                              SizedBox(width: 8),
+                              Text('Chưa thể Check-out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          content: Text(cleanMsg, style: const TextStyle(fontSize: 14)),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Đã hiểu'),
+                            ),
                           ],
                         ),
-                        content: Text(cleanMsg, style: const TextStyle(fontSize: 14)),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            child: const Text('Đã hiểu'),
-                          ),
-                        ],
-                      ),
-                    );
+                      );
+                    }
                   }
-                }
-              },
+                },
+                icon: const Icon(LucideIcons.logOut, size: 18),
+                label: const Text(
+                  'Xác nhận Check-out rời vị trí',
+                  style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2C241E),
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shadowColor: const Color(0xFF2C241E).withValues(alpha: 0.3),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                ),
+              ),
             ),
           ],
         ],
@@ -816,28 +991,56 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        Text(label, style: const TextStyle(fontSize: 13.5, color: AppColors.warmTextMuted)),
         Text(
           val,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 13.5,
             fontWeight: FontWeight.bold,
-            color: isDone ? AppColors.completedText : AppColors.textMuted,
+            color: isDone ? const Color(0xFF16A34A) : AppColors.warmTextMuted,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildIconDetail(IconData icon, String label, String value) {
+  Widget _buildIconDetail(IconData icon, String label, String value, {bool isDarkCard = false}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 14, color: AppColors.textMuted),
-        const SizedBox(width: 6),
-        Text('$label: ', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isDarkCard ? Colors.white.withValues(alpha: 0.18) : const Color(0xFFF7F2EA),
+          ),
+          child: Icon(icon, size: 15, color: isDarkCard ? Colors.white : AppColors.goldPrimary),
+        ),
+        const SizedBox(width: 10),
         Expanded(
-          child: Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: isDarkCard ? const Color(0xFFE8DCCB) : AppColors.warmTextMuted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkCard ? Colors.white : AppColors.warmTextDark,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

@@ -5,8 +5,6 @@ import 'package:provider/provider.dart';
 import '../../../../core/services/fcm_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../../core/widgets/app_button.dart';
-import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../../../core/widgets/empty_state_widget.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
@@ -100,7 +98,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.warmBackground,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -110,26 +108,61 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ]);
           },
           child: ListView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(18.0),
             children: [
-              AppHeader(
-                title: 'Thông báo',
-                subtitle: '$unreadCount chưa xem',
-              ),
-              const SizedBox(height: 12),
-
-              // SECTION 1: USER NOTIFICATIONS LIST (DATABASE & LIVE PUSH & SYNTHESIZED ASSIGNMENTS)
+              // Header Main Title
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Text('Thông báo của tôi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                  Text(
-                    'Tổng: ${combinedNotifications.length}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  if (context.canPop()) ...[
+                    GestureDetector(
+                      onTap: () => context.pop(),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(LucideIcons.arrowLeft, color: AppColors.warmTextDark, size: 20),
+                      ),
+                    ),
+                  ],
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'THÔNG BÁO',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.goldLabel,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Thông báo của tôi',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w400,
+                          color: AppColors.warmTextDark,
+                          fontFamily: 'serif',
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
 
               // Filter Chips Row
               SingleChildScrollView(
@@ -144,7 +177,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
               if (notifProvider.isLoading) ...[
                 const AppLoadingIndicator(message: 'Đang nạp thông báo...'),
@@ -169,30 +202,40 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         }
                       }
                     },
+                    borderRadius: BorderRadius.circular(28),
                     child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(14),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: n.isRead ? AppColors.borderLight : AppColors.primary.withValues(alpha: 0.3)),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 16,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Bell circle badge
                           Container(
-                            padding: const EdgeInsets.all(8),
+                            width: 44,
+                            height: 44,
                             decoration: BoxDecoration(
-                              color: n.isRead ? AppColors.background : AppColors.primaryLight,
                               shape: BoxShape.circle,
+                              color: n.isRead ? const Color(0xFFFAF6F0) : const Color(0xFFF7F2EA),
                             ),
                             child: Icon(
                               LucideIcons.bell,
-                              size: 16,
-                              color: n.isRead ? AppColors.textMuted : AppColors.primary,
+                              size: 20,
+                              color: n.isRead ? const Color(0xFFA89A8B) : AppColors.goldPrimary,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,22 +243,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 Text(
                                   n.title,
                                   style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: n.isRead ? FontWeight.w500 : FontWeight.bold,
-                                    color: AppColors.textPrimary,
+                                    fontSize: 15,
+                                    fontWeight: n.isRead ? FontWeight.w600 : FontWeight.bold,
+                                    color: AppColors.warmTextDark,
                                   ),
                                 ),
                                 if (n.content != null) ...[
-                                  const SizedBox(height: 2),
+                                  const SizedBox(height: 4),
                                   Text(
                                     n.content!,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF5C4E43),
+                                      height: 1.35,
+                                    ),
                                   ),
                                 ],
-                                const SizedBox(height: 4),
-                                Text(Formatters.formatDateTime(n.createdAt), style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                                const SizedBox(height: 6),
+                                Text(
+                                  Formatters.formatDateTime(n.createdAt),
+                                  style: const TextStyle(fontSize: 11.5, color: AppColors.warmTextMuted),
+                                ),
                               ],
                             ),
                           ),
@@ -223,7 +273,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             Container(
                               width: 8,
                               height: 8,
-                              decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                              margin: const EdgeInsets.only(top: 6, left: 6),
+                              decoration: const BoxDecoration(
+                                color: AppColors.goldPrimary,
+                                shape: BoxShape.circle,
+                              ),
                             ),
                         ],
                       ),
@@ -231,56 +285,114 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                 ),
               ],
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
               // SECTION 2: PENDING PLANS CONFIRMATION SECTION (FOR LEAD)
-              const Text('Kế hoạch cần xác nhận', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              const SizedBox(height: 10),
+              const Text(
+                'Kế hoạch cần xác nhận',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.warmTextDark,
+                ),
+              ),
+              const SizedBox(height: 12),
 
               if (pendingConfirmPlans.isEmpty) ...[
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.borderLight),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: const Text('Không có kế hoạch nào đang chờ xác nhận.', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                  child: const Text(
+                    'Không có kế hoạch nào đang chờ xác nhận.',
+                    style: TextStyle(fontSize: 13.5, color: AppColors.warmTextMuted),
+                  ),
                 ),
               ] else ...[
                 ...pendingConfirmPlans.map(
                   (plan) => Container(
                     margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.borderLight),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 16,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(plan.taskName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                        Text('${plan.orderCode}${plan.eventName != null ? ' · ${plan.eventName}' : ''}', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                        const SizedBox(height: 4),
-                        Text(Formatters.formatDateTime(plan.startTime), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        const SizedBox(height: 10),
-                        AppButton(
-                          text: 'Xác nhận kế hoạch',
-                          isFullWidth: true,
-                          isLoading: _confirmingPlanId == plan.planId,
-                          onPressed: () async {
-                            setState(() => _confirmingPlanId = plan.planId);
-                            try {
-                              await taskProvider.updatePlanStatus(plan.planId, 'CONFIRMED');
-                              if (context.mounted) {
-                                context.push('/staff/tasks/${plan.planId}');
+                        Text(
+                          plan.taskName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            fontFamily: 'serif',
+                            color: AppColors.warmTextDark,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${plan.orderCode}${plan.eventName != null ? ' · ${plan.eventName}' : ''}',
+                          style: const TextStyle(fontSize: 12.5, color: AppColors.warmTextMuted),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          Formatters.formatDateTime(plan.startTime),
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF5C4E43)),
+                        ),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 46,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.goldPrimary,
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              shadowColor: AppColors.goldPrimary.withValues(alpha: 0.3),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                            onPressed: () async {
+                              setState(() => _confirmingPlanId = plan.planId);
+                              try {
+                                await taskProvider.updatePlanStatus(plan.planId, 'CONFIRMED');
+                                if (context.mounted) {
+                                  context.push('/staff/tasks/${plan.planId}');
+                                }
+                              } finally {
+                                if (mounted) setState(() => _confirmingPlanId = null);
                               }
-                            } finally {
-                              if (mounted) setState(() => _confirmingPlanId = null);
-                            }
-                          },
+                            },
+                            child: _confirmingPlanId == plan.planId
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Text(
+                                    'Xác nhận kế hoạch',
+                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                  ),
+                          ),
                         ),
                       ],
                     ),
@@ -300,23 +412,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       onTap: () => setState(() => _selectedFilter = value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.borderLight,
-          ),
+          color: isSelected ? AppColors.goldPrimary : const Color(0xFFFAF6F0),
+          borderRadius: BorderRadius.circular(24),
+          border: isSelected
+              ? null
+              : Border.all(color: const Color(0xFFEFE8DC)),
           boxShadow: isSelected
-              ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 4, offset: const Offset(0, 2))]
+              ? [
+                  BoxShadow(
+                    color: AppColors.goldPrimary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
               : null,
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? Colors.white : AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : const Color(0xFF8C7456),
           ),
         ),
       ),

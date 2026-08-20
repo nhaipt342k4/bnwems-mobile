@@ -34,7 +34,6 @@ class _ManagerNotificationsScreenState extends State<ManagerNotificationsScreen>
     final titleLower = n.title.toLowerCase();
     final contentLower = (n.content ?? '').toLowerCase();
 
-    // Extract ORD-xxx code if present
     final RegExp orderRegExp = RegExp(r'ORD-\d+', caseSensitive: false);
     final match = orderRegExp.firstMatch(n.title) ?? orderRegExp.firstMatch(n.content ?? '');
     final orderCode = match?.group(0)?.toUpperCase();
@@ -93,67 +92,103 @@ class _ManagerNotificationsScreenState extends State<ManagerNotificationsScreen>
     final unreadCount = notifProvider.unreadCount;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Thông báo Quản lý', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
-        actions: [
-          if (unreadCount > 0)
-            TextButton(
-              onPressed: () {
-                for (final n in notifications) {
-                  if (!notifProvider.isRead(n.notificationId, n.isRead)) {
-                    notifProvider.markAsRead(n.notificationId);
-                  }
-                }
-              },
-              child: const Text('Đọc tất cả', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
-            ),
-        ],
-      ),
+      backgroundColor: AppColors.warmBackground,
       body: SafeArea(
         child: RefreshIndicator(
+          color: AppColors.goldPrimary,
           onRefresh: () async {
             await notifProvider.loadNotifications();
           },
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Filter Tabs
-              Container(
-                color: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              // Header Section
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    FilterChip(
-                      label: const Text('Tất cả'),
-                      selected: _filter == 'ALL',
-                      selectedColor: AppColors.primaryLight,
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        fontWeight: _filter == 'ALL' ? FontWeight.bold : FontWeight.normal,
-                        color: _filter == 'ALL' ? AppColors.primary : AppColors.textSecondary,
-                      ),
-                      onSelected: (_) => setState(() => _filter = 'ALL'),
+                    Row(
+                      children: [
+                        if (context.canPop()) ...[
+                          GestureDetector(
+                            onTap: () => context.pop(),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(LucideIcons.arrowLeft, color: AppColors.warmTextDark, size: 20),
+                            ),
+                          ),
+                        ],
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'THÔNG BÁO',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.goldLabel,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Thông báo quản lý',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w400,
+                                color: AppColors.warmTextDark,
+                                fontFamily: 'serif',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    FilterChip(
-                      label: Text('Chưa đọc ($unreadCount)'),
-                      selected: _filter == 'UNREAD',
-                      selectedColor: AppColors.primaryLight,
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        fontWeight: _filter == 'UNREAD' ? FontWeight.bold : FontWeight.normal,
-                        color: _filter == 'UNREAD' ? AppColors.primary : AppColors.textSecondary,
+                    if (unreadCount > 0)
+                      TextButton(
+                        onPressed: () {
+                          for (final n in notifications) {
+                            if (!notifProvider.isRead(n.notificationId, n.isRead)) {
+                              notifProvider.markAsRead(n.notificationId);
+                            }
+                          }
+                        },
+                        child: const Text(
+                          'Đọc tất cả',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.goldPrimary),
+                        ),
                       ),
-                      onSelected: (_) => setState(() => _filter = 'UNREAD'),
-                    ),
                   ],
                 ),
               ),
 
-              const Divider(height: 1),
+              // Filter Chips Row
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                child: Row(
+                  children: [
+                    _buildFilterChip('ALL', 'Tất cả (${notifications.length})'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('UNREAD', 'Chưa đọc ($unreadCount)'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
 
               // Notifications List
               Expanded(
@@ -165,7 +200,7 @@ class _ManagerNotificationsScreenState extends State<ManagerNotificationsScreen>
                             icon: LucideIcons.bellOff,
                           )
                         : ListView.builder(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                             itemCount: filteredList.length,
                             itemBuilder: (context, index) {
                               final n = filteredList[index];
@@ -178,15 +213,23 @@ class _ManagerNotificationsScreenState extends State<ManagerNotificationsScreen>
                                     _navigateToTarget(n);
                                   }
                                 },
+                                borderRadius: BorderRadius.circular(20),
                                 child: Container(
-                                  margin: const EdgeInsets.only(bottom: 10),
-                                  padding: const EdgeInsets.all(14),
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: isRead ? Colors.white : Colors.blue.shade50.withValues(alpha: 0.4),
-                                    borderRadius: BorderRadius.circular(14),
+                                    color: isRead ? Colors.white : const Color(0xFFFFF9EE),
+                                    borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: isRead ? AppColors.borderLight : AppColors.primary.withValues(alpha: 0.3),
+                                      color: isRead ? const Color(0xFFF0E8DC) : const Color(0xFFF0DFBD),
                                     ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.04),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
                                   ),
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,16 +237,16 @@ class _ManagerNotificationsScreenState extends State<ManagerNotificationsScreen>
                                       Container(
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          color: isRead ? AppColors.background : AppColors.primaryLight,
+                                          color: isRead ? const Color(0xFFFAF6F0) : const Color(0xFFFFF0E5),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
                                           _getNotificationIcon(n),
                                           size: 18,
-                                          color: isRead ? AppColors.textMuted : AppColors.primary,
+                                          color: isRead ? AppColors.warmTextMuted : AppColors.goldPrimary,
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
+                                      const SizedBox(width: 14),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,9 +254,9 @@ class _ManagerNotificationsScreenState extends State<ManagerNotificationsScreen>
                                             Text(
                                               n.title,
                                               style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: isRead ? FontWeight.w600 : FontWeight.bold,
-                                                color: AppColors.textPrimary,
+                                                fontSize: 15,
+                                                fontWeight: isRead ? FontWeight.w500 : FontWeight.bold,
+                                                color: AppColors.warmTextDark,
                                               ),
                                             ),
                                             if (n.content != null && n.content!.isNotEmpty) ...[
@@ -222,13 +265,13 @@ class _ManagerNotificationsScreenState extends State<ManagerNotificationsScreen>
                                                 n.content!,
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                                style: const TextStyle(fontSize: 12.5, color: AppColors.warmTextMuted),
                                               ),
                                             ],
                                             const SizedBox(height: 6),
                                             Text(
                                               Formatters.formatDateTime(n.createdAt),
-                                              style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                                              style: const TextStyle(fontSize: 11, color: AppColors.warmTextMuted),
                                             ),
                                           ],
                                         ),
@@ -237,9 +280,9 @@ class _ManagerNotificationsScreenState extends State<ManagerNotificationsScreen>
                                         Container(
                                           width: 8,
                                           height: 8,
-                                          margin: const EdgeInsets.only(top: 4, left: 4),
+                                          margin: const EdgeInsets.only(top: 6, left: 6),
                                           decoration: const BoxDecoration(
-                                            color: AppColors.primary,
+                                            color: AppColors.goldPrimary,
                                             shape: BoxShape.circle,
                                           ),
                                         ),
@@ -251,6 +294,37 @@ class _ManagerNotificationsScreenState extends State<ManagerNotificationsScreen>
                           ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String value, String label) {
+    final isSelected = _filter == value;
+    return GestureDetector(
+      onTap: () => setState(() => _filter = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.goldPrimary : const Color(0xFFF7F2EA),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.goldPrimary.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : AppColors.warmTextMuted,
           ),
         ),
       ),

@@ -467,35 +467,49 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
   Widget _planHeader(SchedulePlan plan) {
     final loc = plan.location;
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.borderLight)),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFC59B63), Color(0xFFA87E46)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFC59B63).withValues(alpha: 0.25),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(plan.planCode, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
-          _pill(Formatters.formatStatus(plan.status), AppColors.primaryLight, AppColors.primaryDark),
+          Text(plan.planCode, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFE2D5C5))),
+          _pill(Formatters.formatStatus(plan.status), const Color(0xFFE0F2FE), const Color(0xFF0284C7)),
         ]),
-        const SizedBox(height: 6),
-        Text(plan.taskName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        const SizedBox(height: 8),
+        Text(plan.taskName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
         const SizedBox(height: 10),
-        _info(LucideIcons.hash, '${plan.orderCode}${plan.eventName != null && plan.eventName!.isNotEmpty ? ' · ${plan.eventName}' : ''}', color: AppColors.primary, bold: true),
-        if (plan.customerName.isNotEmpty) ...[const SizedBox(height: 6), _info(LucideIcons.user, plan.customerName)],
+        _info(LucideIcons.hash, Formatters.formatOrderEvent(plan.orderCode, plan.eventName), color: const Color(0xFFF3D084), bold: true),
+        if (plan.customerName.isNotEmpty) ...[const SizedBox(height: 6), _info(LucideIcons.user, plan.customerName, color: const Color(0xFFD6C5B3))],
         const SizedBox(height: 6),
-        _info(LucideIcons.clock, '${Formatters.formatDate(plan.startTime)} · ${Formatters.formatTime(plan.startTime)}${plan.endTime != null ? ' - ${Formatters.formatTime(plan.endTime)}' : ''}'),
-        if (loc != null && loc.isNotEmpty) ...[const SizedBox(height: 6), _info(LucideIcons.mapPin, loc)],
+        _info(LucideIcons.clock, '${Formatters.formatDate(plan.startTime)} · ${Formatters.formatTime(plan.startTime)}${plan.endTime != null ? ' - ${Formatters.formatTime(plan.endTime)}' : ''}', color: const Color(0xFFD6C5B3)),
+        if (loc != null && loc.isNotEmpty) ...[const SizedBox(height: 6), _info(LucideIcons.mapPin, loc, color: const Color(0xFFD6C5B3))],
         if (plan.assignees.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Container(height: 1, color: const Color(0xFF6E5644)),
           const SizedBox(height: 12),
-          Container(height: 1, color: AppColors.borderLight),
-          const SizedBox(height: 10),
-          const Text('Nhân sự phụ trách', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
+          const Text('Nhân sự phụ trách', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFFB8A594), letterSpacing: 0.5)),
           const SizedBox(height: 8),
           ...plan.assignees.map((a) {
             final isLead = a.role == 'LEAD';
             return Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Row(children: [
-                Icon(isLead ? LucideIcons.userCheck : LucideIcons.user, size: 14, color: isLead ? AppColors.leaderPurple : Colors.blue.shade700),
+                Icon(isLead ? LucideIcons.userCheck : LucideIcons.user, size: 14, color: isLead ? const Color(0xFFF3D084) : const Color(0xFFE2D5C5)),
                 const SizedBox(width: 6),
-                Expanded(child: Text('${a.fullName}${isLead ? ' · Trưởng nhóm' : ''}', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary))),
+                Expanded(child: Text('${a.fullName}${isLead ? ' · Trưởng nhóm' : ''}', style: const TextStyle(fontSize: 13, color: Colors.white))),
                 if (_checkInUrls[a.userId] != null) ...[
                   ClipRRect(
                     borderRadius: BorderRadius.circular(6),
@@ -504,11 +518,11 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
                   const SizedBox(width: 6),
                 ],
                 if (a.checkOutAt != null && a.checkOutAt!.isNotEmpty)
-                  _pill('Đã check-out', _tone('ok').bg, _tone('ok').fg)
+                  _pill('Đã check-out', const Color(0xFFDCFCE7), const Color(0xFF16A34A))
                 else if (a.isCheckedIn)
-                  _pill('Đã check-in', _tone('info').bg, _tone('info').fg)
+                  _pill('Đã check-in', const Color(0xFFE0F2FE), const Color(0xFF0284C7))
                 else
-                  _pill('Chưa check-in', AppColors.pendingBg, AppColors.pendingText),
+                  _pill('Chưa check-in', const Color(0xFFFEF3C7), const Color(0xFFD97706)),
               ]),
             );
           }),

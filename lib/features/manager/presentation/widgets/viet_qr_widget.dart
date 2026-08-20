@@ -37,6 +37,7 @@ class _VietQrWidgetState extends State<VietQrWidget> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Đã sao chép nội dung chuyển khoản'),
+        backgroundColor: AppColors.goldPrimary,
         duration: Duration(seconds: 2),
       ),
     );
@@ -78,10 +79,10 @@ class _VietQrWidgetState extends State<VietQrWidget> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Đã lưu mã QR vào Thư viện ảnh (Photos) thành công!'),
-            backgroundColor: Colors.green.shade700,
-            duration: const Duration(seconds: 4),
+          const SnackBar(
+            content: Text('Đã lưu mã QR vào Thư viện ảnh (Photos) thành công!'),
+            backgroundColor: Color(0xFF16A34A),
+            duration: Duration(seconds: 4),
           ),
         );
       }
@@ -111,7 +112,7 @@ class _VietQrWidgetState extends State<VietQrWidget> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Đã lưu mã QR vào thư mục Pictures: $fileName'),
-                backgroundColor: Colors.green.shade700,
+                backgroundColor: const Color(0xFF16A34A),
                 duration: const Duration(seconds: 4),
               ),
             );
@@ -122,7 +123,7 @@ class _VietQrWidgetState extends State<VietQrWidget> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Lỗi khi tải mã QR: ${e.toString().replaceAll('Exception: ', '')}'),
-              backgroundColor: Colors.red.shade700,
+              backgroundColor: const Color(0xFFDC2626),
               duration: const Duration(seconds: 3),
             ),
           );
@@ -140,11 +141,17 @@ class _VietQrWidgetState extends State<VietQrWidget> {
     final qrUrl = _buildQrUrl();
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -153,19 +160,19 @@ class _VietQrWidgetState extends State<VietQrWidget> {
             child: Text(
               'Cổng thanh toán VietQR',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+                color: Color(0xFF2C241E),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderLight),
+              color: const Color(0xFFFAF6F0),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFEFE8DC)),
             ),
             child: Image.network(
               qrUrl,
@@ -177,44 +184,45 @@ class _VietQrWidgetState extends State<VietQrWidget> {
                 width: 220,
                 color: Colors.grey.shade100,
                 alignment: Alignment.center,
-                child: const Text('Không tải được QR VietQR'),
+                child: const Text('Không tải được QR VietQR', style: TextStyle(color: AppColors.warmTextMuted, fontSize: 13)),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
             Formatters.formatCurrency(widget.amount),
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppColors.primary,
+              color: Color(0xFFC59B63),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             'Nội dung chuyển khoản: ${widget.addInfo}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: AppColors.warmTextMuted,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _copyContent,
-                  icon: Icon(_copied ? LucideIcons.check : LucideIcons.copy, size: 16),
-                  label: Text(_copied ? 'Đã chép' : 'Sao chép'),
+                  icon: Icon(_copied ? LucideIcons.check : LucideIcons.copy, size: 16, color: const Color(0xFF2C241E)),
+                  label: Text(_copied ? 'Đã chép' : 'Sao chép', style: const TextStyle(color: Color(0xFF2C241E), fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(42),
+                    minimumSize: const Size.fromHeight(48),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(16),
                     ),
+                    side: const BorderSide(color: Color(0xFFEFE8DC)),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _isDownloading ? null : _downloadQrImage,
@@ -230,10 +238,11 @@ class _VietQrWidgetState extends State<VietQrWidget> {
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    minimumSize: const Size.fromHeight(42),
+                    backgroundColor: AppColors.goldPrimary,
+                    elevation: 0,
+                    minimumSize: const Size.fromHeight(48),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                 ),

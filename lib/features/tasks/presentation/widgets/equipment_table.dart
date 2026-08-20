@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../data/models/work_task_models.dart';
 
@@ -81,11 +80,18 @@ class _EquipmentTableState extends State<EquipmentTable> {
         // Table 1: Kho doanh nghiệp
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.borderLight),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 12,
+                spreadRadius: 1,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -95,12 +101,17 @@ class _EquipmentTableState extends State<EquipmentTable> {
                   Expanded(
                     child: Row(
                       children: [
-                        Container(width: 4, height: 16, color: AppColors.primary),
+                        Container(width: 3.5, height: 16, color: AppColors.goldPrimary),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
                             'Kho doanh nghiệp (theo pick-list)',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.warmTextDark,
+                              fontFamily: 'serif',
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -110,77 +121,86 @@ class _EquipmentTableState extends State<EquipmentTable> {
                   if (_isConfirmed) ...[
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.green.shade300),
+                        color: const Color(0xFFDCFCE7),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Text(
+                      child: const Text(
                         'ĐÃ XÁC NHẬN XUẤT KHO',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),
                       ),
                     ),
                   ],
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               if (internalItems.isEmpty)
-                const Text('Không có thiết bị trong nhóm này.', style: TextStyle(fontSize: 12, color: AppColors.textMuted))
-              else
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columnSpacing: 20,
-                    headingRowHeight: 36,
-                    dataRowMinHeight: 44,
-                    dataRowMaxHeight: 44,
-                    headingRowColor: WidgetStateProperty.all(AppColors.background),
-                    columns: const [
-                      DataColumn(label: Text('Mặt hàng / Thiết bị', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('ĐVT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('SL yêu cầu', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('SL khả dụng', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                const Text('Không có thiết bị trong nhóm này.', style: TextStyle(fontSize: 13, color: AppColors.warmTextMuted))
+              else ...[
+                // Clean Custom Table Header
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 6,
+                        child: Text('Mặt hàng / Thiết bị', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text('ĐVT', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warmTextMuted)),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text('SL yêu cầu', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+                      ),
                     ],
-                    rows: internalItems.map((item) {
-                      final avail = item.quantityAvailable ?? item.quantity;
-                      // So đủ/thiếu theo phần KHO NỘI BỘ ròng (đã trừ phần thuê NCC), không theo tổng đặt.
-                      final isSufficient = avail >= item.internalNeed;
-                      return DataRow(
-                        cells: [
-                          DataCell(Text(item.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
-                          DataCell(Text(item.unit, style: const TextStyle(fontSize: 12))),
-                          DataCell(
-                            item.quantityRented > 0
-                                ? Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('${item.quantity}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                      Text('kho ${item.internalNeed} · thuê ${item.quantityRented}',
-                                          style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
-                                    ],
-                                  )
-                                : Text('${item.quantity}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          ),
-                          DataCell(
-                            Text(
-                              '$avail',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isSufficient ? AppColors.completedText : AppColors.cancelledText,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
                   ),
                 ),
+                const Divider(height: 1, color: Color(0xFFF0E8DC)),
+                const SizedBox(height: 2),
+
+                // Table Rows
+                ...internalItems.map((item) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    decoration: const BoxDecoration(
+                      border: Border(bottom: BorderSide(color: Color(0xFFFAF6F0), width: 1)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 6,
+                          child: Text(
+                            item.name,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            item.unit,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 12, color: AppColors.warmTextMuted),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            '${item.quantity}',
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
 
               if (widget.onConfirmWarehouseMovement != null) ...[
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 AppTextField(
                   label: 'Ghi chú trước khi xuất kho (nếu có)',
                   hintText: 'Nhập ghi chú xuất kho...',
@@ -189,14 +209,35 @@ class _EquipmentTableState extends State<EquipmentTable> {
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 8),
-                  Text(_error!, style: const TextStyle(fontSize: 12, color: AppColors.cancelledText)),
+                  Text(_error!, style: const TextStyle(fontSize: 12, color: Colors.red)),
                 ],
-                const SizedBox(height: 12),
-                AppButton(
-                  text: _isConfirmed ? 'Đã xác nhận xuất kho' : 'Xác nhận xuất kho',
-                  isFullWidth: true,
-                  isLoading: _isSubmitting,
-                  onPressed: _isConfirmed ? null : _handleConfirm,
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _isConfirmed || _isSubmitting ? null : _handleConfirm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.goldPrimary,
+                      disabledBackgroundColor: const Color(0xFFEAD8B7),
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      shadowColor: AppColors.goldPrimary.withValues(alpha: 0.3),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : Text(
+                            _isConfirmed ? 'Đã xác nhận xuất kho' : 'Xác nhận xuất kho',
+                            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+                          ),
+                  ),
                 ),
               ],
             ],
@@ -208,49 +249,82 @@ class _EquipmentTableState extends State<EquipmentTable> {
         if (supplierItems.isNotEmpty)
           Container(
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderLight),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Container(width: 4, height: 16, color: AppColors.leaderPurple),
+                    Container(width: 3.5, height: 16, color: const Color(0xFF7E22CE)),
                     const SizedBox(width: 8),
                     const Text(
                       'Nhà cung cấp (theo đơn thuê)',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.warmTextDark,
+                        fontFamily: 'serif',
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columnSpacing: 20,
-                    headingRowHeight: 36,
-                    dataRowMinHeight: 44,
-                    dataRowMaxHeight: 44,
-                    headingRowColor: WidgetStateProperty.all(AppColors.background),
-                    columns: const [
-                      DataColumn(label: Text('Mặt hàng / Thiết bị', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('ĐVT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('SL yêu cầu', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                const SizedBox(height: 14),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 6,
+                        child: Text('Mặt hàng / Thiết bị', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text('ĐVT', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warmTextMuted)),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text('SL yêu cầu', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+                      ),
                     ],
-                    rows: supplierItems.map((item) {
-                      return DataRow(
-                        cells: [
-                          DataCell(Text(item.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
-                          DataCell(Text(item.unit, style: const TextStyle(fontSize: 12))),
-                          DataCell(Text('${item.quantity}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                        ],
-                      );
-                    }).toList(),
                   ),
                 ),
+                const Divider(height: 1, color: Color(0xFFF0E8DC)),
+                const SizedBox(height: 2),
+                ...supplierItems.map((item) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    decoration: const BoxDecoration(
+                      border: Border(bottom: BorderSide(color: Color(0xFFFAF6F0), width: 1)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 6,
+                          child: Text(item.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(item.unit, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.warmTextMuted)),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text('${item.quantity}', textAlign: TextAlign.right, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
               ],
             ),
           ),

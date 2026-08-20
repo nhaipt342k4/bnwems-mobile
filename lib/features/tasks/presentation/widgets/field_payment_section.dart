@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../data/models/work_task_models.dart';
 
@@ -109,22 +108,29 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
     if (widget.existingPayment != null) {
       final p = widget.existingPayment!;
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderLight),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 16,
+              spreadRadius: 1,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Row(
               children: [
-                Icon(LucideIcons.checkCircle2, color: AppColors.completedText, size: 18),
+                Icon(LucideIcons.checkCircle2, color: Color(0xFF16A34A), size: 18),
                 SizedBox(width: 8),
                 Text(
                   'ĐÃ GHI NHẬN ĐẶT CỌC HẠNG MỤC',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.completedText),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),
                 ),
               ],
             ),
@@ -132,10 +138,10 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Số tiền cọc:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                const Text('Số tiền cọc:', style: TextStyle(fontSize: 13, color: AppColors.warmTextMuted)),
                 Text(
                   Formatters.formatCurrency(p.amount),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.goldPrimary),
                 ),
               ],
             ),
@@ -143,10 +149,10 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Phương thức:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                const Text('Phương thức:', style: TextStyle(fontSize: 13, color: AppColors.warmTextMuted)),
                 Text(
                   p.method == 'cash' ? 'Tiền mặt' : 'Chuyển khoản QR',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
                 ),
               ],
             ),
@@ -156,21 +162,21 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Ghi chú:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  const Text('Ghi chú:', style: TextStyle(fontSize: 13, color: AppColors.warmTextMuted)),
                   Expanded(
                     child: Text(
                       p.note!,
                       textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                      style: const TextStyle(fontSize: 13, color: AppColors.warmTextDark),
                     ),
                   ),
                 ],
               ),
             ],
             if (p.evidencePhotoUrl != null && p.evidencePhotoUrl!.isNotEmpty) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(16),
                 child: Image.network(
                   p.evidencePhotoUrl!,
                   height: 140,
@@ -186,11 +192,18 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            spreadRadius: 1,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Form(
         key: _formKey,
@@ -199,7 +212,7 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
           children: [
             const Text(
               'Ghi nhận thu tiền cọc tại hiện trường',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
             ),
             const SizedBox(height: 14),
             AppTextField(
@@ -215,23 +228,53 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
               },
             ),
             const SizedBox(height: 12),
-            const Text('Phương thức thanh toán *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
+            const Text('Phương thức thanh toán *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
-                  child: ChoiceChip(
-                    label: const Center(child: Text('Tiền mặt')),
-                    selected: _method == 'cash',
-                    onSelected: (s) => setState(() => _method = 'cash'),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _method = 'cash'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _method == 'cash' ? AppColors.goldPrimary : const Color(0xFFF7F2EA),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Tiền mặt',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: _method == 'cash' ? Colors.white : AppColors.goldLabel,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: ChoiceChip(
-                    label: const Center(child: Text('Chuyển khoản QR')),
-                    selected: _method == 'bank_transfer',
-                    onSelected: (s) => setState(() => _method = 'bank_transfer'),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _method = 'bank_transfer'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _method == 'bank_transfer' ? AppColors.goldPrimary : const Color(0xFFF7F2EA),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Chuyển khoản QR',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: _method == 'bank_transfer' ? Colors.white : AppColors.goldLabel,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -240,20 +283,20 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
             if (_method == 'bank_transfer') ...[
               const SizedBox(height: 14),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  color: const Color(0xFFFFF9EE),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFF0DFBD)),
                 ),
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Thông tin tài khoản công ty:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+                    Text('Thông tin tài khoản công ty:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.goldLabel)),
                     SizedBox(height: 4),
-                    Text('Ngân hàng: MBBank - Chi nhánh Hà Nội', style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
-                    Text('Số tài khoản: 999988889999', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    Text('Chủ tài khoản: CÔNG TY BNWEMS', style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+                    Text('Ngân hàng: MBBank - Chi nhánh Hà Nội', style: TextStyle(fontSize: 12, color: AppColors.warmTextDark)),
+                    Text('Số tài khoản: 999988889999', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+                    Text('Chủ tài khoản: CÔNG TY BNWEMS', style: TextStyle(fontSize: 12, color: AppColors.warmTextDark)),
                   ],
                 ),
               ),
@@ -269,14 +312,14 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
 
             Text(
               _method == 'bank_transfer' ? 'Ảnh bằng chứng chuyển khoản *' : 'Ảnh hóa đơn/chứng từ (tùy chọn)',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
             ),
             const SizedBox(height: 8),
             if (_photoFile != null) ...[
               Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(16),
                     child: Image.file(_photoFile!, height: 140, width: double.infinity, fit: BoxFit.cover),
                   ),
                   Positioned(
@@ -294,25 +337,44 @@ class _FieldPaymentSectionState extends State<FieldPaymentSection> {
                 ],
               ),
             ] else ...[
-              OutlinedButton.icon(
-                onPressed: _pickPhoto,
-                icon: const Icon(LucideIcons.camera, size: 18),
-                label: const Text('Chụp ảnh bằng chứng'),
-                style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 44)),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: _pickPhoto,
+                  icon: const Icon(LucideIcons.camera, size: 18),
+                  label: const Text('Chụp ảnh bằng chứng'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.goldPrimary,
+                    side: const BorderSide(color: Color(0xFFF0E8DC)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  ),
+                ),
               ),
             ],
 
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(fontSize: 12, color: AppColors.cancelledText)),
+              Text(_error!, style: const TextStyle(fontSize: 12, color: Colors.red)),
             ],
             const SizedBox(height: 16),
 
-            AppButton(
-              text: 'Xác nhận thu cọc',
-              isFullWidth: true,
-              isLoading: _isSubmitting,
-              onPressed: _handleSubmit,
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _handleSubmit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.goldPrimary,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shadowColor: AppColors.goldPrimary.withValues(alpha: 0.3),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Xác nhận thu cọc', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold)),
+              ),
             ),
           ],
         ),

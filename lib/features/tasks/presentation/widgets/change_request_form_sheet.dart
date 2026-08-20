@@ -5,10 +5,9 @@ import '../../../../core/widgets/app_button.dart';
 import '../../data/models/work_task_models.dart';
 import '../../data/services/change_request_api_service.dart';
 
-/// Bottom sheet cho LEAD gửi yêu cầu đổi thiết bị tại hiện trường (add/remove/replace).
 class ChangeRequestFormSheet extends StatefulWidget {
   final String orderId;
-  final List<WorkTaskItem> orderItems; // thiết bị đang có trong đơn (để BỚT / đồ cũ khi THAY)
+  final List<WorkTaskItem> orderItems;
   final VoidCallback? onSubmitted;
 
   const ChangeRequestFormSheet({
@@ -40,8 +39,8 @@ class _ChangeRequestFormSheetState extends State<ChangeRequestFormSheet> {
   final _service = ChangeRequestApiService();
 
   String _type = 'remove'; // 'add' | 'remove' | 'replace'
-  String? _oldItemId; // remove / replace-old (từ orderItems)
-  String? _newItemId; // add / replace-new (từ catalog)
+  String? _oldItemId;
+  String? _newItemId;
   final _oldQtyCtrl = TextEditingController(text: '1');
   final _newQtyCtrl = TextEditingController(text: '1');
 
@@ -106,7 +105,7 @@ class _ChangeRequestFormSheetState extends State<ChangeRequestFormSheet> {
         Navigator.of(context).pop();
         widget.onSubmitted?.call();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã gửi yêu cầu đổi thiết bị cho Quản lý duyệt.'), backgroundColor: AppColors.completedText),
+          const SnackBar(content: Text('Đã gửi yêu cầu đổi thiết bị cho Quản lý duyệt.'), backgroundColor: Color(0xFF16A34A)),
         );
       }
     } catch (e) {
@@ -126,8 +125,8 @@ class _ChangeRequestFormSheetState extends State<ChangeRequestFormSheet> {
       padding: EdgeInsets.only(bottom: bottom),
       child: Container(
         decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: const EdgeInsets.all(20),
         child: SingleChildScrollView(
@@ -140,19 +139,22 @@ class _ChangeRequestFormSheetState extends State<ChangeRequestFormSheet> {
                   width: 40,
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(color: AppColors.borderLight, borderRadius: BorderRadius.circular(2)),
+                  decoration: BoxDecoration(color: const Color(0xFFF0E8DC), borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const Row(
                 children: [
-                  Icon(LucideIcons.replace, size: 18, color: AppColors.primary),
+                  Icon(LucideIcons.replace, size: 20, color: AppColors.goldPrimary),
                   SizedBox(width: 8),
-                  Text('Yêu cầu đổi thiết bị (hiện trường)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Yêu cầu đổi thiết bị (hiện trường)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400, color: AppColors.warmTextDark, fontFamily: 'serif'),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
-              const Text('Loại yêu cầu', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
+              const Text('Loại yêu cầu', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   _typeChip('remove', 'Bớt'),
@@ -165,7 +167,7 @@ class _ChangeRequestFormSheetState extends State<ChangeRequestFormSheet> {
               const SizedBox(height: 16),
 
               if (_needsOld) ...[
-                Text(_type == 'replace' ? 'Thiết bị cũ (bỏ ra)' : 'Thiết bị cần bớt', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                Text(_type == 'replace' ? 'Thiết bị cũ (bỏ ra)' : 'Thiết bị cần bớt', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
                 const SizedBox(height: 6),
                 _dropdown(
                   value: _oldItemId,
@@ -179,10 +181,10 @@ class _ChangeRequestFormSheetState extends State<ChangeRequestFormSheet> {
               ],
 
               if (_needsNew) ...[
-                Text(_type == 'replace' ? 'Thiết bị mới (thay vào)' : 'Thiết bị cần thêm', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                Text(_type == 'replace' ? 'Thiết bị mới (thay vào)' : 'Thiết bị cần thêm', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
                 const SizedBox(height: 6),
                 if (_loadingCatalog)
-                  const Padding(padding: EdgeInsets.all(8), child: Text('Đang tải danh mục thiết bị...', style: TextStyle(fontSize: 12, color: AppColors.textMuted)))
+                  const Padding(padding: EdgeInsets.all(8), child: Text('Đang tải danh mục thiết bị...', style: TextStyle(fontSize: 12, color: AppColors.warmTextMuted)))
                 else
                   _dropdown(
                     value: _newItemId,
@@ -196,7 +198,7 @@ class _ChangeRequestFormSheetState extends State<ChangeRequestFormSheet> {
               ],
 
               if (_error != null) ...[
-                Text(_error!, style: const TextStyle(fontSize: 12, color: AppColors.cancelledText)),
+                Text(_error!, style: const TextStyle(fontSize: 12, color: Colors.red)),
                 const SizedBox(height: 10),
               ],
               AppButton(
@@ -216,13 +218,28 @@ class _ChangeRequestFormSheetState extends State<ChangeRequestFormSheet> {
   Widget _typeChip(String value, String label) {
     final selected = _type == value;
     return Expanded(
-      child: ChoiceChip(
-        label: Center(child: Text(label)),
-        selected: selected,
-        onSelected: (_) => setState(() {
+      child: GestureDetector(
+        onTap: () => setState(() {
           _type = value;
           _error = null;
         }),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.goldPrimary : const Color(0xFFF7F2EA),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: selected ? Colors.white : AppColors.goldLabel,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -236,12 +253,14 @@ class _ChangeRequestFormSheetState extends State<ChangeRequestFormSheet> {
     return DropdownButtonFormField<String>(
       initialValue: value,
       isExpanded: true,
-      hint: Text(hint, style: const TextStyle(fontSize: 13)),
+      hint: Text(hint, style: const TextStyle(fontSize: 13, color: AppColors.warmTextMuted)),
       items: items,
       onChanged: onChanged,
       decoration: InputDecoration(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        filled: true,
+        fillColor: const Color(0xFFF7F2EA),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
       ),
     );
   }
@@ -252,8 +271,11 @@ class _ChangeRequestFormSheetState extends State<ChangeRequestFormSheet> {
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
         labelText: label,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        labelStyle: const TextStyle(color: AppColors.warmTextMuted),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        filled: true,
+        fillColor: const Color(0xFFF7F2EA),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
       ),
     );
   }

@@ -6,7 +6,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
 
@@ -60,7 +59,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Cập nhật hồ sơ cá nhân thành công!'),
-            backgroundColor: Colors.green,
+            backgroundColor: Color(0xFF16A34A),
           ),
         );
         context.pop();
@@ -81,12 +80,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = authProvider.user;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.warmBackground,
       appBar: AppBar(
-        title: const Text('Cập nhật hồ sơ cá nhân', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        backgroundColor: AppColors.warmBackground,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: const Text(
+          'Cập nhật hồ sơ cá nhân',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w400,
+            color: AppColors.warmTextDark,
+            fontFamily: 'serif',
+          ),
+        ),
+        leading: Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: IconButton(
+            icon: const Icon(LucideIcons.chevronLeft, size: 18, color: Color(0xFF8C7355)),
+            padding: EdgeInsets.zero,
+            onPressed: () => context.pop(),
+          ),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -100,20 +126,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 Center(
                   child: Stack(
                     children: [
-                      CircleAvatar(
-                        radius: 48,
-                        backgroundColor: AppColors.primaryLight,
-                        backgroundImage: _avatarImageFile != null
-                            ? FileImage(_avatarImageFile!)
-                            : (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
-                                ? NetworkImage(user.avatarUrl!) as ImageProvider
-                                : null,
-                        child: (_avatarImageFile == null && (user?.avatarUrl == null || user!.avatarUrl!.isEmpty))
-                            ? Text(
-                                Formatters.getInitial(user?.fullName ?? '?'),
-                                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
-                              )
-                            : null,
+                      Container(
+                        width: 96,
+                        height: 96,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.goldPrimary,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.goldPrimary.withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: _avatarImageFile != null
+                              ? Image.file(_avatarImageFile!, fit: BoxFit.cover)
+                              : (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
+                                  ? Image.network(user.avatarUrl!, fit: BoxFit.cover)
+                                  : Center(
+                                      child: Text(
+                                        Formatters.getInitial(user?.fullName ?? '?'),
+                                        style: const TextStyle(
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          fontFamily: 'serif',
+                                        ),
+                                      ),
+                                    ),
+                        ),
                       ),
                       Positioned(
                         bottom: 0,
@@ -122,11 +165,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           onTap: _pickAvatarImage,
                           child: Container(
                             padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(
-                              color: AppColors.primary,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2C241E),
                               shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                            child: const Icon(LucideIcons.camera, color: Colors.white, size: 18),
+                            child: const Icon(LucideIcons.camera, color: Colors.white, size: 16),
                           ),
                         ),
                       ),
@@ -140,8 +190,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.borderLight),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 16,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,19 +225,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Tên đăng nhập', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                          const Text('Tên đăng nhập', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warmTextMuted)),
                           const SizedBox(height: 6),
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
-                              color: AppColors.background,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.borderLight),
+                              color: AppColors.warmInputBg,
+                              borderRadius: BorderRadius.circular(16),
                             ),
                             child: Text(
                               user?.username ?? '--',
-                              style: const TextStyle(fontSize: 14, color: AppColors.textMuted, fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: 14, color: AppColors.warmTextDark, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -189,17 +245,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Vai trò', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                          const Text('Vai trò', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warmTextMuted)),
                           const SizedBox(height: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
-                              borderRadius: BorderRadius.circular(8),
+                              color: const Color(0xFFF7F2EA),
+                              borderRadius: BorderRadius.circular(16),
                             ),
                             child: Text(
                               Formatters.formatRole(user?.role.roleName ?? ''),
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.goldLabel),
                             ),
                           ),
                         ],
@@ -215,11 +271,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                 const SizedBox(height: 24),
 
-                AppButton(
-                  text: 'Lưu thay đổi',
-                  isFullWidth: true,
-                  isLoading: authProvider.isLoading,
-                  onPressed: _handleSaveProfile,
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: authProvider.isLoading ? null : _handleSaveProfile,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.goldPrimary,
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      shadowColor: AppColors.goldPrimary.withValues(alpha: 0.3),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                    child: authProvider.isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Lưu thay đổi',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                  ),
                 ),
               ],
             ),

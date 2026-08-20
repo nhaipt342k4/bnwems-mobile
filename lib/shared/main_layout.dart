@@ -39,6 +39,62 @@ class MainLayout extends StatelessWidget {
     }
   }
 
+  Widget _buildNavItem({
+    required BuildContext context,
+    required int index,
+    required IconData icon,
+    required String label,
+    required int selectedIndex,
+    int badgeCount = 0,
+  }) {
+    final isSelected = selectedIndex == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => _onItemTapped(index, context),
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFFF5EAD8) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: badgeCount > 0
+                    ? Badge(
+                        label: Text('$badgeCount'),
+                        child: Icon(
+                          icon,
+                          color: isSelected ? AppColors.goldPrimary : const Color(0xFF9E846B),
+                          size: 22,
+                        ),
+                      )
+                    : Icon(
+                        icon,
+                        color: isSelected ? AppColors.goldPrimary : const Color(0xFF9E846B),
+                        size: 22,
+                      ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? AppColors.goldPrimary : const Color(0xFF9E846B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedIndex = _calculateSelectedIndex(context);
@@ -47,38 +103,56 @@ class MainLayout extends StatelessWidget {
     return Scaffold(
       body: child,
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        decoration: BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: AppColors.borderLight, width: 1)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: selectedIndex,
-          onTap: (index) => _onItemTapped(index, context),
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.textMuted,
-          items: [
-            const BottomNavigationBarItem(
-              icon: Icon(LucideIcons.home),
-              label: 'Trang chủ',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(LucideIcons.clock),
-              label: 'Lịch trình',
-            ),
-            BottomNavigationBarItem(
-              icon: Badge(
-                isLabelVisible: unreadCount > 0,
-                label: Text('$unreadCount'),
-                child: const Icon(LucideIcons.bell),
-              ),
-              label: 'Thông báo',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(LucideIcons.user),
-              label: 'Hồ sơ',
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
             ),
           ],
+        ),
+        child: SafeArea(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                context: context,
+                index: 0,
+                icon: LucideIcons.home,
+                label: 'Trang chủ',
+                selectedIndex: selectedIndex,
+              ),
+              _buildNavItem(
+                context: context,
+                index: 1,
+                icon: LucideIcons.calendar,
+                label: 'Lịch trình',
+                selectedIndex: selectedIndex,
+              ),
+              _buildNavItem(
+                context: context,
+                index: 2,
+                icon: LucideIcons.bell,
+                label: 'Thông báo',
+                selectedIndex: selectedIndex,
+                badgeCount: unreadCount,
+              ),
+              _buildNavItem(
+                context: context,
+                index: 3,
+                icon: LucideIcons.user,
+                label: 'Hồ sơ',
+                selectedIndex: selectedIndex,
+              ),
+            ],
+          ),
         ),
       ),
     );

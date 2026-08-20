@@ -29,32 +29,34 @@ class AppButton extends StatelessWidget {
 
     switch (variant) {
       case AppButtonVariant.primary:
-        bg = AppColors.primary;
+        bg = AppColors.goldPrimary;
         fg = Colors.white;
         break;
       case AppButtonVariant.secondary:
-        bg = AppColors.primaryLight;
-        fg = AppColors.primaryDark;
+        bg = const Color(0xFF2C241E);
+        fg = Colors.white;
         break;
       case AppButtonVariant.outline:
         bg = Colors.white;
-        fg = AppColors.textPrimary;
-        borderSide = const BorderSide(color: AppColors.border);
+        fg = AppColors.warmTextDark;
+        borderSide = const BorderSide(color: Color(0xFFF0E8DC));
         break;
       case AppButtonVariant.danger:
-        bg = AppColors.cancelledText;
-        fg = Colors.white;
+        bg = const Color(0xFFFEF2F2);
+        fg = const Color(0xFFB91C1C);
+        borderSide = const BorderSide(color: Color(0xFFFFD6D6));
         break;
     }
 
     final buttonStyle = ElevatedButton.styleFrom(
       backgroundColor: bg,
       foregroundColor: fg,
-      elevation: 0,
+      elevation: variant == AppButtonVariant.primary ? 2 : 0,
+      shadowColor: variant == AppButtonVariant.primary ? AppColors.goldPrimary.withValues(alpha: 0.3) : Colors.transparent,
       side: borderSide,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(24),
       ),
     );
 
@@ -78,7 +80,7 @@ class AppButton extends StatelessWidget {
               Text(
                 text,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 14.5,
                   fontWeight: FontWeight.bold,
                   color: fg,
                 ),
@@ -86,15 +88,19 @@ class AppButton extends StatelessWidget {
             ],
           );
 
-    final button = ElevatedButton(
-      style: buttonStyle,
-      onPressed: isLoading ? null : onPressed,
-      child: child,
+    final button = SizedBox(
+      height: 48,
+      child: ElevatedButton(
+        style: buttonStyle,
+        onPressed: isLoading ? null : onPressed,
+        child: child,
+      ),
     );
 
     if (isFullWidth) {
       return SizedBox(
         width: double.infinity,
+        height: 48,
         child: button,
       );
     }

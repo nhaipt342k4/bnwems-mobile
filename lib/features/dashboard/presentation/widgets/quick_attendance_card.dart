@@ -25,20 +25,22 @@ class QuickAttendanceCard extends StatelessWidget {
     if (plan == null || myAssignee == null) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderLight),
+          color: AppColors.warmInputBg,
+          borderRadius: BorderRadius.circular(28),
         ),
         child: const Row(
           children: [
-            Icon(LucideIcons.clock, color: AppColors.textMuted, size: 20),
+            Icon(LucideIcons.clock, color: AppColors.warmTextMuted, size: 20),
             SizedBox(width: 12),
             Expanded(
               child: Text(
                 'Không có công việc nào đang chờ điểm danh.',
-                style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: AppColors.warmTextMuted,
+                ),
               ),
             ),
           ],
@@ -53,19 +55,16 @@ class QuickAttendanceCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isCheckedIn ? const Color(0xFF1E293B) : AppColors.surface, // Dark background if checked-in
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isCheckedIn ? Colors.transparent : AppColors.primary.withValues(alpha: 0.3),
-          width: 1.5,
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFEFE8DC)),
         boxShadow: [
           BoxShadow(
-            color: isCheckedIn ? Colors.black.withValues(alpha: 0.1) : AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -74,9 +73,9 @@ class QuickAttendanceCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
+              const Icon(
                 LucideIcons.checkCircle2,
-                color: isCheckedIn ? const Color(0xFF38BDF8) : AppColors.primary,
+                color: AppColors.goldPrimary,
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -85,43 +84,45 @@ class QuickAttendanceCard extends StatelessWidget {
                   isCheckedIn
                       ? 'ĐÃ ĐIỂM DANH (${Formatters.formatTime(myAssignee!.checkInAt)})'
                       : 'ĐIỂM DANH KHẨN CẤP HÔM NAY',
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: const TextStyle(
+                    fontSize: 11.5,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
-                    color: isCheckedIn ? const Color(0xFF38BDF8) : AppColors.primary,
+                    color: AppColors.goldPrimary,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             plan!.taskName,
-            style: TextStyle(
-              fontSize: 15,
+            style: const TextStyle(
+              fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: isCheckedIn ? Colors.white : AppColors.textPrimary,
+              fontFamily: 'serif',
+              color: Color(0xFF2C241E),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             '${plan!.orderCode} · ${Formatters.formatTime(plan!.startTime)}',
-            style: TextStyle(
-              fontSize: 12,
-              color: isCheckedIn ? const Color(0xFF94A3B8) : AppColors.textSecondary,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: AppColors.goldPrimary,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           if (!isCheckedIn) ...[
             if (hasOtherActivePlan) ...[
               Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Colors.amber.shade300),
                 ),
                 child: Row(
@@ -131,7 +132,7 @@ class QuickAttendanceCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'Bạn không được check-in khi chưa hoàn thành (check-out) công việc ${activePlan!.planCode} (${activePlan!.taskName}).',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.amber.shade900),
                       ),
                     ),
                   ],
@@ -140,16 +141,16 @@ class QuickAttendanceCard extends StatelessWidget {
             ],
             SizedBox(
               width: double.infinity,
+              height: 48,
               child: ElevatedButton.icon(
                 onPressed: onCheckInPressed,
                 icon: Icon(hasOtherActivePlan ? LucideIcons.lock : LucideIcons.checkCircle2, size: 18),
                 label: Text(hasOtherActivePlan ? 'Nút Check-in đã bị khóa' : 'Check-in Ngay'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: hasOtherActivePlan ? Colors.grey.shade300 : AppColors.primary,
+                  backgroundColor: hasOtherActivePlan ? Colors.grey.shade300 : AppColors.goldPrimary,
                   foregroundColor: hasOtherActivePlan ? Colors.grey.shade700 : Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(28),
                   ),
                   textStyle: const TextStyle(
                     fontSize: 14,
@@ -159,32 +160,52 @@ class QuickAttendanceCard extends StatelessWidget {
               ),
             ),
           ] else if (!isCheckedOut) ...[
-            SizedBox(
+            Container(
               width: double.infinity,
+              height: 50,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFC59B63), Color(0xFFA87E46)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFC59B63).withValues(alpha: 0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
               child: ElevatedButton.icon(
                 onPressed: onCheckOutPressed,
-                icon: const Icon(LucideIcons.logOut, size: 18),
-                label: const Text('Check-out Ngay'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF334155),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  textStyle: const TextStyle(
-                    fontSize: 14,
+                icon: const Icon(LucideIcons.logOut, size: 18, color: Colors.white),
+                label: const Text(
+                  'Check-out ngay',
+                  style: TextStyle(
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
                   ),
                 ),
               ),
             ),
           ] else ...[
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,

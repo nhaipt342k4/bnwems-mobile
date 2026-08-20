@@ -7,7 +7,6 @@ import '../../../../core/utils/formatters.dart';
 import '../providers/manager_order_list_provider.dart';
 
 class ManagerOrderListScreen extends StatefulWidget {
-  /// Bộ lọc nhanh khởi tạo (deep-link từ trang chủ, vd '?filter=upcoming'). null = giữ nguyên bộ lọc hiện tại.
   final String? initialFilter;
 
   const ManagerOrderListScreen({super.key, this.initialFilter});
@@ -42,7 +41,7 @@ class _ManagerOrderListScreenState extends State<ManagerOrderListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<ManagerOrderListProvider>();
       final initial = _quickFilterFromParam(widget.initialFilter);
-      if (initial != null) provider.setQuickFilter(initial); // đồng bộ chip theo deep-link
+      if (initial != null) provider.setQuickFilter(initial);
       provider.fetchOrders();
     });
   }
@@ -56,37 +55,56 @@ class _ManagerOrderListScreenState extends State<ManagerOrderListScreen> {
   Color _getStatusBgColor(String status) {
     switch (status.toUpperCase()) {
       case 'IN_PROGRESS':
-        return Colors.amber.shade50;
+        return const Color(0xFFFEF3C7);
       case 'COMPLETED':
       case 'PAID':
-        return Colors.green.shade50;
+        return const Color(0xFFDCFCE7);
       case 'CANCELLED':
       case 'UNPAID':
-        return Colors.red.shade50;
+        return const Color(0xFFFEE2E2);
       case 'CONFIRMED':
       case 'DEPOSITED':
-        return Colors.blue.shade50;
+        return const Color(0xFFE0F2FE);
+      case 'NEW':
+      case 'NEW_ORDER':
+        return const Color(0xFFF1F5F9);
       default:
-        return Colors.grey.shade100;
+        return const Color(0xFFF3F4F6);
     }
   }
 
   Color _getStatusTextColor(String status) {
     switch (status.toUpperCase()) {
       case 'IN_PROGRESS':
-        return Colors.amber.shade800;
+        return const Color(0xFFD97706);
       case 'COMPLETED':
       case 'PAID':
-        return Colors.green.shade800;
+        return const Color(0xFF16A34A);
       case 'CANCELLED':
       case 'UNPAID':
-        return Colors.red.shade800;
+        return const Color(0xFFDC2626);
       case 'CONFIRMED':
       case 'DEPOSITED':
-        return Colors.blue.shade800;
+        return const Color(0xFF0284C7);
+      case 'NEW':
+      case 'NEW_ORDER':
+        return const Color(0xFF475569);
       default:
-        return Colors.grey.shade700;
+        return const Color(0xFF4B5563);
     }
+  }
+
+  String _cleanTitle(String? orderCode, String? rawName, String fallback) {
+    final code = (orderCode ?? '').trim();
+    var name = (rawName ?? fallback).trim();
+    if (code.isNotEmpty) {
+      name = name.replaceAll(RegExp(r'\s*[-·]\s*' + RegExp.escape(code), caseSensitive: false), '');
+      name = name.replaceAll(RegExp(r'^' + RegExp.escape(code) + r'\s*[-·]\s*', caseSensitive: false), '');
+      name = name.replaceAll(RegExp(r'\b' + RegExp.escape(code) + r'\b', caseSensitive: false), '');
+      name = name.replaceAll(RegExp(r'\s+'), ' ').trim();
+      name = name.replaceAll(RegExp(r'^[-·\s]+|[-·\s]+$'), '').trim();
+    }
+    return name.isNotEmpty ? name : 'Kịch bản sự kiện';
   }
 
   @override
@@ -94,141 +112,274 @@ class _ManagerOrderListScreenState extends State<ManagerOrderListScreen> {
     final provider = context.watch<ManagerOrderListProvider>();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Đơn hàng', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-      ),
-      body: Column(
-        children: [
-          // Search & Filter header section
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  onChanged: (val) => provider.setSearch(val),
-                  decoration: InputDecoration(
-                    hintText: 'Tìm theo mã đơn, tên khách hàng...',
-                    prefixIcon: const Icon(LucideIcons.search, size: 18),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.borderLight),
+      backgroundColor: AppColors.warmBackground,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'ĐƠN HÀNG',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.goldLabel,
+                      letterSpacing: 1.2,
                     ),
-                    filled: true,
-                    fillColor: Colors.white,
                   ),
-                ),
-                const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildQuickFilterChip(provider, QuickFilter.all, 'Tất cả'),
-                      _buildQuickFilterChip(provider, QuickFilter.confirmed, 'Đã xác nhận'),
-                      _buildQuickFilterChip(provider, QuickFilter.upcoming, 'Sắp diễn ra'),
-                      _buildQuickFilterChip(provider, QuickFilter.inProgress, 'Đang thực hiện'),
-                      _buildQuickFilterChip(provider, QuickFilter.completed, 'Hoàn thành'),
-                    ],
+                  SizedBox(height: 2),
+                  Text(
+                    'Quản lý đơn hàng',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.warmTextDark,
+                      fontFamily: 'serif',
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-          // Order List Content
-          Expanded(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : provider.errorMessage != null
-                    ? Center(
-                        child: Text(provider.errorMessage!, style: TextStyle(color: Colors.red.shade700)),
-                      )
-                    : provider.filteredOrders.isEmpty
-                        ? RefreshIndicator(
-                            onRefresh: () => provider.fetchOrders(),
-                            child: SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: Container(
-                                height: 300,
-                                alignment: Alignment.center,
-                                child: const Text('Không tìm thấy đơn hàng nào.', style: TextStyle(color: AppColors.textMuted)),
+            // Search Bar & Filter Chips
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (val) => provider.setSearch(val),
+                      style: const TextStyle(fontSize: 14, color: AppColors.warmTextDark),
+                      decoration: InputDecoration(
+                        hintText: 'Tìm theo mã đơn, tên khách hàng, sự kiện...',
+                        hintStyle: const TextStyle(fontSize: 13, color: AppColors.warmTextMuted),
+                        prefixIcon: const Icon(LucideIcons.search, size: 18, color: Color(0xFF8C7B6B)),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(LucideIcons.x, size: 16, color: AppColors.warmTextMuted),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  provider.setSearch('');
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildQuickFilterChip(provider, QuickFilter.all, 'Tất cả'),
+                        _buildQuickFilterChip(provider, QuickFilter.confirmed, 'Đã xác nhận'),
+                        _buildQuickFilterChip(provider, QuickFilter.upcoming, 'Sắp diễn ra'),
+                        _buildQuickFilterChip(provider, QuickFilter.inProgress, 'Đang thực hiện'),
+                        _buildQuickFilterChip(provider, QuickFilter.completed, 'Hoàn thành'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Order List Content
+            Expanded(
+              child: provider.isLoading
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.goldPrimary))
+                  : provider.errorMessage != null
+                      ? Center(
+                          child: Text(provider.errorMessage!, style: TextStyle(color: Colors.red.shade700)),
+                        )
+                      : provider.filteredOrders.isEmpty
+                          ? RefreshIndicator(
+                              color: AppColors.goldPrimary,
+                              onRefresh: () => provider.fetchOrders(),
+                              child: SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                child: Container(
+                                  height: 300,
+                                  alignment: Alignment.center,
+                                  child: const Text('Không tìm thấy đơn hàng nào.', style: TextStyle(color: AppColors.warmTextMuted)),
+                                ),
                               ),
-                            ),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: () => provider.fetchOrders(),
-                            child: ListView.builder(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.all(16),
-                              itemCount: provider.filteredOrders.length,
-                              itemBuilder: (context, index) {
-                                final order = provider.filteredOrders[index];
-                                return InkWell(
-                                  onTap: () => context.push('/manager/orders/${order.orderId}'),
-                                  child: Container(
-                                    margin: const EdgeInsets.only(bottom: 10),
-                                    padding: const EdgeInsets.all(14),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: AppColors.borderLight),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(order.orderCode, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                              decoration: BoxDecoration(
-                                                color: _getStatusBgColor(order.orderStatus),
-                                                borderRadius: BorderRadius.circular(8),
+                            )
+                          : RefreshIndicator(
+                              color: AppColors.goldPrimary,
+                              onRefresh: () => provider.fetchOrders(),
+                              child: ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                                itemCount: provider.filteredOrders.length,
+                                itemBuilder: (context, index) {
+                                  final order = provider.filteredOrders[index];
+                                  final cleanScriptTitle = _cleanTitle(order.orderCode, order.eventName, 'Kịch bản sự kiện');
+
+                                  return InkWell(
+                                    onTap: () => context.push('/manager/orders/${order.orderId}'),
+                                    borderRadius: BorderRadius.circular(22),
+                                    child: Container(
+                                      margin: const EdgeInsets.only(bottom: 14),
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(22),
+                                        border: Border.all(color: const Color(0xFFEFE8DC)),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.04),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Top Row: Code + Status Badge
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                order.orderCode,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.goldPrimary,
+                                                ),
                                               ),
-                                              child: Text(
-                                                Formatters.formatStatus(order.orderStatus),
-                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _getStatusTextColor(order.orderStatus)),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: _getStatusBgColor(order.orderStatus),
+                                                  borderRadius: BorderRadius.circular(14),
+                                                ),
+                                                child: Text(
+                                                  Formatters.formatStatus(order.orderStatus),
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: _getStatusTextColor(order.orderStatus),
+                                                  ),
+                                                ),
                                               ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+
+                                          // Event Title Row with Icon
+                                          Row(
+                                            children: [
+                                              const Icon(LucideIcons.fileText, size: 14, color: AppColors.warmTextMuted),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  cleanScriptTitle,
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                    color: AppColors.warmTextMuted,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+
+                                          // Customer Name
+                                          Text(
+                                            order.customerName,
+                                            style: const TextStyle(
+                                              fontSize: 16.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF2C241E),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+
+                                          // Event Date
+                                          Text(
+                                            Formatters.formatDate(order.eventDate),
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: AppColors.warmTextMuted,
+                                            ),
+                                          ),
+                                          if (order.location.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                const Icon(LucideIcons.mapPin, size: 13.5, color: AppColors.warmTextMuted),
+                                                const SizedBox(width: 6),
+                                                Expanded(
+                                                  child: Text(
+                                                    order.location,
+                                                    style: const TextStyle(fontSize: 12.5, color: AppColors.warmTextMuted),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          order.eventName ?? order.customerName,
-                                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '${order.customerName} · ${Formatters.formatDate(order.eventDate)}',
-                                          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          order.location,
-                                          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          Formatters.formatCurrency(order.totalAmount),
-                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
-                                        ),
-                                      ],
+                                          const SizedBox(height: 14),
+                                          const CustomDottedLine(),
+                                          const SizedBox(height: 12),
+
+                                          // Bottom Row: Total Amount
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              const Text(
+                                                'TỔNG TIỀN',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.warmTextMuted,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                              Text(
+                                                Formatters.formatCurrency(order.totalAmount),
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.goldPrimary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -236,19 +387,64 @@ class _ManagerOrderListScreenState extends State<ManagerOrderListScreen> {
   Widget _buildQuickFilterChip(ManagerOrderListProvider provider, QuickFilter filter, String label) {
     final isSelected = provider.quickFilter == filter;
     return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: FilterChip(
-        selected: isSelected,
-        label: Text(label),
-        labelStyle: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: isSelected ? Colors.white : AppColors.textPrimary,
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: () => provider.setQuickFilter(filter),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFFD4A359) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: isSelected ? null : Border.all(color: const Color(0xFFEFE8DC)),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFD4A359).withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.bold,
+              color: isSelected ? Colors.white : AppColors.warmTextDark,
+            ),
+          ),
         ),
-        selectedColor: AppColors.primary,
-        backgroundColor: Colors.grey.shade100,
-        onSelected: (_) => provider.setQuickFilter(filter),
       ),
+    );
+  }
+}
+
+class CustomDottedLine extends StatelessWidget {
+  const CustomDottedLine({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final boxWidth = constraints.constrainWidth();
+        const dashWidth = 4.0;
+        const dashHeight = 1.0;
+        final dashCount = (boxWidth / (2 * dashWidth)).floor();
+        return Flex(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          direction: Axis.horizontal,
+          children: List.generate(dashCount, (_) {
+            return const SizedBox(
+              width: dashWidth,
+              height: dashHeight,
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: Color(0xFF9E876B)),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

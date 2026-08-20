@@ -18,7 +18,7 @@ class AppRoleBadge extends StatelessWidget {
 
     if (isLead) {
       return const AppBadge(
-        label: 'Trưởng nhóm (LEAD)',
+        label: 'Trưởng nhóm',
         backgroundColor: AppColors.leaderPurpleBg,
         textColor: AppColors.leaderPurple,
       );

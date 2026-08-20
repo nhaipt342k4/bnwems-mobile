@@ -4,8 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../tasks/data/models/work_task_models.dart';
 
-/// Card "Việc đang làm" ở trang chủ: hiển thị lịch mà nhân viên ĐANG check-in dở (chưa check-out) kèm nút
-/// Check-out nhanh. Nguồn dữ liệu: GET /schedule-plans/active (TaskProvider.activeCheckInPlans).
+/// Card "Việc đang làm" ở trang chủ: hiển thị lịch mà nhân viên ĐANG check-in dở (chưa check-out) kèm nút Check-out nhanh.
 class ActiveCheckInCard extends StatefulWidget {
   final SchedulePlan plan;
   final SchedulePlanAssignee? myAssignee;
@@ -41,8 +40,6 @@ class _ActiveCheckInCardState extends State<ActiveCheckInCard> {
   }
 
   Future<void> _handleCheckOut() async {
-    // Lấy messenger TRƯỚC await: sau khi check-out thành công card bị gỡ khỏi cây widget (provider cập
-    // nhật activeCheckInPlans) nên không dùng context của card sau async gap được.
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _loading = true);
     try {
@@ -66,70 +63,148 @@ class _ActiveCheckInCardState extends State<ActiveCheckInCard> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.35), width: 1.5),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFEFE8DC)),
         boxShadow: [
-          BoxShadow(color: AppColors.primary.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 3)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            spreadRadius: 1,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header status & time
           Row(
             children: [
               Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(color: Colors.green.shade500, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'ĐANG THỰC HIỆN',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary, letterSpacing: 0.5),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF16A34A),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'ĐANG THỰC HIỆN',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF16A34A),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const Spacer(),
               if (checkInTime.isNotEmpty) ...[
-                Icon(LucideIcons.clock, size: 13, color: AppColors.textMuted),
+                const Icon(LucideIcons.clock, size: 14, color: AppColors.warmTextMuted),
                 const SizedBox(width: 4),
-                Text('Check-in $checkInTime', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                Text(
+                  'Check-in $checkInTime',
+                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.warmTextMuted),
+                ),
               ],
             ],
           ),
-          const SizedBox(height: 10),
-          Text(plan.taskName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: 4),
+          const SizedBox(height: 14),
+          // Task Title
+          Text(
+            plan.taskName,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C241E),
+              fontFamily: 'serif',
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Codes line
           Text(
             [plan.planCode, if (plan.orderCode.isNotEmpty) plan.orderCode].join(' · '),
-            style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.goldPrimary),
           ),
           if (location != null && location.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(LucideIcons.mapPin, size: 14, color: AppColors.textMuted),
-                const SizedBox(width: 5),
-                Expanded(child: Text(location, style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary))),
+                const Icon(LucideIcons.mapPin, size: 15, color: AppColors.goldPrimary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    location,
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF3D332B)),
+                  ),
+                ),
               ],
             ),
           ],
-          const SizedBox(height: 14),
-          SizedBox(
+          const SizedBox(height: 18),
+          // Vibrant Warm Gold Check-Out Button
+          Container(
             width: double.infinity,
+            height: 50,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFC59B63), Color(0xFFA87E46)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFC59B63).withValues(alpha: 0.35),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
             child: ElevatedButton.icon(
               onPressed: _loading ? null : _handleCheckOut,
               icon: _loading
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(LucideIcons.logOut, size: 18),
-              label: Text(_loading ? 'Đang check-out...' : 'Check-out ngay'),
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(LucideIcons.logOut, size: 18, color: Colors.white),
+              label: Text(
+                _loading ? 'Đang check-out...' : 'Check-out ngay',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                  color: Colors.white,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0F172A),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 46),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                minimumSize: const Size.fromHeight(50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
               ),
             ),
           ),

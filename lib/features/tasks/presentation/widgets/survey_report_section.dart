@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../data/models/work_task_models.dart';
 
@@ -124,15 +123,17 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Đã lưu bản nháp khảo sát thành công! Bạn vẫn có thể tiếp tục chỉnh sửa.'),
-            backgroundColor: Colors.blue,
+            backgroundColor: AppColors.goldPrimary,
             duration: Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi lưu bản nháp: $e'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi lưu bản nháp: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -152,7 +153,7 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(20),
@@ -162,29 +163,29 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
           children: [
             const Text(
               'Tải ảnh khảo sát mặt bằng',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
             ),
             const SizedBox(height: 16),
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10)),
-                child: Icon(LucideIcons.camera, color: Colors.blue.shade800, size: 20),
+                decoration: const BoxDecoration(color: Color(0xFFF7F2EA), shape: BoxShape.circle),
+                child: const Icon(LucideIcons.camera, color: AppColors.goldPrimary, size: 20),
               ),
-              title: const Text('Chụp ảnh từ máy ảnh', style: TextStyle(fontWeight: FontWeight.w600)),
+              title: const Text('Chụp ảnh từ máy ảnh', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.warmTextDark)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickFromCamera();
               },
             ),
-            const Divider(height: 1),
+            const Divider(height: 1, color: Color(0xFFF0E8DC)),
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(10)),
-                child: Icon(LucideIcons.image, color: Colors.green.shade800, size: 20),
+                decoration: const BoxDecoration(color: Color(0xFFF7F2EA), shape: BoxShape.circle),
+                child: const Icon(LucideIcons.image, color: AppColors.goldPrimary, size: 20),
               ),
-              title: const Text('Chọn nhiều ảnh từ thư viện', style: TextStyle(fontWeight: FontWeight.w600)),
+              title: const Text('Chọn nhiều ảnh từ thư viện', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.warmTextDark)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickFromGallery();
@@ -286,22 +287,29 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
     if (widget.existingReport != null) {
       final report = widget.existingReport!;
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderLight),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 16,
+              spreadRadius: 1,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Row(
               children: [
-                Icon(LucideIcons.fileCheck2, color: AppColors.completedText, size: 18),
+                Icon(LucideIcons.fileCheck2, color: Color(0xFF16A34A), size: 18),
                 SizedBox(width: 8),
                 Text(
                   'BÁO CÁO KHẢO SÁT ĐÃ GỬI',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.completedText),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),
                 ),
               ],
             ),
@@ -315,7 +323,7 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
             if (report.notes != null && report.notes!.isNotEmpty)
               _buildDetailRow('Ghi chú', report.notes!),
             if (report.evidencePhotoUrls.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               SizedBox(
                 height: 140,
                 child: ListView.separated(
@@ -323,7 +331,7 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
                   itemCount: report.evidencePhotoUrls.length,
                   separatorBuilder: (_, _) => const SizedBox(width: 8),
                   itemBuilder: (_, i) => ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(16),
                     child: Image.network(
                       report.evidencePhotoUrls[i],
                       height: 140,
@@ -343,11 +351,18 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
     if (widget.planStatus == 'COMPLETED' || widget.planStatus == 'CANCELLED') {
       final isCompleted = widget.planStatus == 'COMPLETED';
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderLight),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 16,
+              spreadRadius: 1,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,7 +371,7 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
               children: [
                 Icon(
                   isCompleted ? LucideIcons.checkCircle2 : LucideIcons.xCircle,
-                  color: isCompleted ? AppColors.completedText : AppColors.cancelledText,
+                  color: isCompleted ? const Color(0xFF16A34A) : Colors.red.shade700,
                   size: 18,
                 ),
                 const SizedBox(width: 8),
@@ -365,7 +380,7 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: isCompleted ? AppColors.completedText : AppColors.cancelledText,
+                    color: isCompleted ? const Color(0xFF16A34A) : Colors.red.shade700,
                   ),
                 ),
               ],
@@ -375,7 +390,7 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
               isCompleted
                   ? 'Kế hoạch khảo sát đã hoàn thành. Không có dữ liệu báo cáo khảo sát ghi nhận.'
                   : 'Kế hoạch đã bị hủy.',
-              style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+              style: const TextStyle(fontSize: 13, color: AppColors.warmTextMuted),
             ),
           ],
         ),
@@ -383,11 +398,18 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            spreadRadius: 1,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Form(
         key: _formKey,
@@ -400,36 +422,34 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
                 const Expanded(
                   child: Text(
                     'Lập báo cáo khảo sát hiện trường',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (_isAlreadySubmitted) ...[
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.green.shade300),
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Text(
-                      'ĐÃ NỘP BÁO CÁO KHẢO SÁT',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                    child: const Text(
+                      'ĐÃ NỘP BÁO CÁO',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),
                     ),
                   ),
                 ] else if (_isDraftSaved) ...[
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.blue.shade300),
+                      color: const Color(0xFFFFF9EE),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Text(
+                    child: const Text(
                       'ĐÃ LƯU BẢN NHÁP',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.goldLabel),
                     ),
                   ),
                 ],
@@ -505,18 +525,18 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
             ),
             const SizedBox(height: 14),
 
-            // Multi Photo Upload Section
+            // Photo Upload
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Ảnh chụp mặt bằng khảo sát *',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
                 ),
                 if (_photoFiles.isNotEmpty)
                   Text(
                     'Đã chọn ${_photoFiles.length} ảnh',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.goldPrimary),
                   ),
               ],
             ),
@@ -525,27 +545,35 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
             if (_photoFiles.isEmpty && !_isAlreadySubmitted) ...[
               InkWell(
                 onTap: _showImagePickerOptions,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(20),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.shade200, style: BorderStyle.solid),
+                    color: const Color(0xFFFFF9EE),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFF0DFBD)),
                   ),
                   child: Column(
                     children: [
-                      Icon(LucideIcons.camera, color: Colors.blue.shade700, size: 28),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Chụp ảnh hoặc chọn nhiều ảnh từ thư viện',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFFF7F2EA),
+                        ),
+                        child: const Icon(LucideIcons.camera, color: AppColors.goldPrimary, size: 22),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Chụp ảnh hoặc chọn nhiều ảnh từ thư viện',
+                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+                      ),
+                      const SizedBox(height: 2),
                       const Text(
                         'Hỗ trợ tải lên cùng lúc nhiều ảnh bằng chứng mặt bằng',
-                        style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                        style: TextStyle(fontSize: 11.5, color: AppColors.warmTextMuted),
                       ),
                     ],
                   ),
@@ -559,25 +587,24 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
                   itemCount: _photoFiles.length + (_isAlreadySubmitted ? 0 : 1),
                   itemBuilder: (ctx, index) {
                     if (!_isAlreadySubmitted && index == _photoFiles.length) {
-                      // Add More Photos Button Card
                       return GestureDetector(
                         onTap: _showImagePickerOptions,
                         child: Container(
                           width: 100,
                           margin: const EdgeInsets.only(right: 8),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.blue.shade300),
+                            color: const Color(0xFFFFF9EE),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFF0DFBD)),
                           ),
-                          child: Column(
+                          child: const Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(LucideIcons.plus, color: Colors.blue.shade800, size: 24),
-                              const SizedBox(height: 4),
+                              Icon(LucideIcons.plus, color: AppColors.goldPrimary, size: 24),
+                              SizedBox(height: 4),
                               Text(
                                 'Thêm ảnh',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
                               ),
                             ],
                           ),
@@ -592,7 +619,7 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
                           width: 110,
                           margin: const EdgeInsets.only(right: 10),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                             image: DecorationImage(
                               image: FileImage(file),
                               fit: BoxFit.cover,
@@ -624,37 +651,56 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
 
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(fontSize: 12, color: AppColors.cancelledText)),
+              Text(_error!, style: const TextStyle(fontSize: 12, color: Colors.red)),
             ],
             const SizedBox(height: 16),
 
             if (_isAlreadySubmitted)
-              AppButton(
-                text: 'Đã nộp báo cáo khảo sát',
-                isFullWidth: true,
-                onPressed: null,
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEAD8B7),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  ),
+                  child: const Text('Đã nộp báo cáo khảo sát', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
               )
             else
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: AppColors.primary, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.goldPrimary, width: 1.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        ),
+                        onPressed: _isSubmitting ? null : _handleSaveDraft,
+                        child: const Text('Lưu bản nháp', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.goldPrimary)),
                       ),
-                      onPressed: _isSubmitting ? null : _handleSaveDraft,
-                      child: const Text('Lưu bản nháp', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: AppButton(
-                      text: 'Gửi báo cáo',
-                      isFullWidth: true,
-                      isLoading: _isSubmitting,
-                      onPressed: _handleSubmit,
+                    child: SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.goldPrimary,
+                          foregroundColor: Colors.white,
+                          elevation: 2,
+                          shadowColor: AppColors.goldPrimary.withValues(alpha: 0.3),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        ),
+                        onPressed: _isSubmitting ? null : _handleSubmit,
+                        child: _isSubmitting
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Text('Gửi báo cáo', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold)),
+                      ),
                     ),
                   ),
                 ],
@@ -679,10 +725,10 @@ class _SurveyReportSectionState extends State<SurveyReportSection> {
         children: [
           SizedBox(
             width: 100,
-            child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            child: Text(label, style: const TextStyle(fontSize: 12.5, color: AppColors.warmTextMuted)),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
           ),
         ],
       ),

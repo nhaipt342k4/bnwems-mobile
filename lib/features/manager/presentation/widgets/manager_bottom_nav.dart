@@ -64,7 +64,7 @@ class ManagerBottomNav extends StatelessWidget {
         onTap: (index) => _onItemTapped(index, context),
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textMuted,
+        unselectedItemColor: const Color(0xFF5C4E43),
         selectedFontSize: 11,
         unselectedFontSize: 11,
         items: const [

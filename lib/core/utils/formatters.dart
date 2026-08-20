@@ -208,21 +208,34 @@ class Formatters {
 
   /// Dịch vai trò nhân sự sang Tiếng Việt
   static String formatRole(String? role) {
-    if (role == null || role.isEmpty) return 'Quản lý';
-    switch (role.toUpperCase()) {
-      case 'MANAGER':
-      case 'ADMIN':
-        return 'Quản lý';
-      case 'LEAD':
-      case 'LEADER':
-      case 'TRUONG_NHOM':
-        return 'Trưởng nhóm';
-      case 'TECHNICAL':
-      case 'TECHNICIAN':
-      case 'KY_THUAT_VIEN':
-        return 'Kỹ thuật viên';
-      default:
-        return role;
+    if (role == null || role.isEmpty) return 'Kỹ thuật viên';
+    final r = role.toUpperCase().trim();
+    if (r == 'MANAGER' || r == 'ADMIN' || r.contains('QUẢN LÝ')) {
+      return 'Quản lý';
     }
+    if (r == 'LEAD' || r == 'LEADER' || r.contains('LEAD') || r.contains('TRƯỞNG NHÓM')) {
+      return 'Trưởng nhóm';
+    }
+    return 'Kỹ thuật viên';
+  }
+
+  /// Format Mã đơn và Tên sự kiện (tránh lặp lại mã đơn ở cuối hoặc đầu tên sự kiện)
+  static String formatOrderEvent(String? orderCode, String? eventName) {
+    final code = (orderCode ?? '').trim();
+    final name = (eventName ?? '').trim();
+
+    if (code.isEmpty) return name;
+    if (name.isEmpty) return code;
+
+    // Loại bỏ hoàn toàn mọi sự lặp lại của mã đơn trong tên sự kiện
+    var cleanName = name;
+    cleanName = cleanName.replaceAll(RegExp(r'\s*[-·]\s*' + RegExp.escape(code), caseSensitive: false), '');
+    cleanName = cleanName.replaceAll(RegExp(r'^' + RegExp.escape(code) + r'\s*[-·]\s*', caseSensitive: false), '');
+    cleanName = cleanName.replaceAll(RegExp(r'\b' + RegExp.escape(code) + r'\b', caseSensitive: false), '');
+    cleanName = cleanName.replaceAll(RegExp(r'\s+'), ' ').trim();
+    cleanName = cleanName.replaceAll(RegExp(r'^[-·\s]+|[-·\s]+$'), '').trim();
+
+    if (cleanName.isEmpty) return code;
+    return '$code · $cleanName';
   }
 }

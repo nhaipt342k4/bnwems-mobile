@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../../core/widgets/app_badge.dart';
 import '../../../authentication/data/models/auth_user.dart';
 import '../../data/models/work_task_models.dart';
 import '../providers/task_provider.dart';
@@ -36,7 +35,7 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Đã sao chép số điện thoại Trưởng nhóm: $phoneNumber'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.goldPrimary,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -65,24 +64,43 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Banner vai trò Kỹ Thuật Viên
+          // 1. Banner vai trò Kỹ Thuật Viên (Soft Cream / Gold Theme)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.confirmedBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.confirmedText.withValues(alpha: 0.3)),
+              color: const Color(0xFFFFF9EE),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFF0DFBD)),
             ),
             child: Row(
               children: [
-                const Icon(LucideIcons.wrench, size: 18, color: AppColors.confirmedText),
-                const SizedBox(width: 10),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFF7F2EA),
+                  ),
+                  child: const Icon(LucideIcons.wrench, size: 18, color: AppColors.goldPrimary),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    isSurvey
-                        ? 'Bạn đang làm Kỹ thuật viên cho công việc Khảo sát hiện trường. Hãy xem lịch trình và liên hệ Trưởng nhóm bên dưới.'
-                        : 'Bạn đang làm Kỹ thuật viên cho công việc này. Hãy xem lịch trình, liên hệ Trưởng nhóm và kiểm kê danh sách thiết bị bên dưới.',
-                    style: const TextStyle(fontSize: 12, color: AppColors.confirmedText, height: 1.3),
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'Bạn đang làm ',
+                      style: const TextStyle(fontSize: 12.5, color: Color(0xFF5C4E43), height: 1.4),
+                      children: [
+                        const TextSpan(
+                          text: 'Kỹ thuật viên',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+                        ),
+                        TextSpan(
+                          text: isSurvey
+                              ? ' cho công việc Khảo sát hiện trường. Hãy xem lịch trình và liên hệ Trưởng nhóm bên dưới.'
+                              : ' cho công việc này. Hãy xem lịch trình, liên hệ Trưởng nhóm và kiểm kê danh sách thiết bị bên dưới.',
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -92,11 +110,18 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
 
           // 2. Lịch trình & Địa điểm (Schedule Card)
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderLight),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 16,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,39 +131,61 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
                   children: [
                     Text(
                       widget.plan.planCode,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.warmTextMuted),
                     ),
-                    AppBadge(
-                      label: Formatters.formatStatus(widget.plan.status),
-                      backgroundColor: AppColors.primaryLight,
-                      textColor: AppColors.primaryDark,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: widget.plan.status == 'COMPLETED'
+                            ? const Color(0xFFDCFCE7)
+                            : const Color(0xFFF7EEDD),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        Formatters.formatStatus(widget.plan.status),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: widget.plan.status == 'COMPLETED'
+                              ? const Color(0xFF16A34A)
+                              : const Color(0xFF8C7355),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Text(
                   widget.plan.taskName,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.warmTextDark,
+                    fontFamily: 'serif',
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Đơn hàng: ${widget.plan.orderCode}${widget.plan.eventName != null ? ' · ${widget.plan.eventName}' : ''}',
-                  style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600),
+                  'Đơn hàng: ${Formatters.formatOrderEvent(widget.plan.orderCode, widget.plan.eventName)}',
+                  style: const TextStyle(fontSize: 13, color: AppColors.goldPrimary, fontWeight: FontWeight.bold),
                 ),
-                const Divider(height: 24),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Divider(height: 1, color: Color(0xFFF0E8DC)),
+                ),
 
                 _buildRowInfo(
                   LucideIcons.clock,
                   'Thời gian thực hiện',
                   '${Formatters.formatDateTime(widget.plan.startTime)}${widget.plan.endTime != null ? ' - ${Formatters.formatTime(widget.plan.endTime)}' : ''}',
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 14),
                 _buildRowInfo(
                   LucideIcons.user,
                   'Khách hàng',
                   '${widget.plan.customerName}${widget.plan.customerPhone.isNotEmpty ? ' (${widget.plan.customerPhone})' : ''}',
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 14),
                 _buildRowInfo(
                   LucideIcons.mapPin,
                   'Địa chỉ hiện trường',
@@ -153,21 +200,29 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
 
           // 3. Thông tin Trưởng nhóm (Team Leader Contact Card)
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 16,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  width: 48,
+                  height: 48,
                   decoration: const BoxDecoration(
-                    color: AppColors.primaryLight,
+                    color: Color(0xFFF7F2EA),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(LucideIcons.userCheck, size: 22, color: AppColors.primary),
+                  child: const Icon(LucideIcons.userCheck, size: 22, color: AppColors.goldPrimary),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -176,18 +231,23 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
                     children: [
                       const Text(
                         'TRƯỞNG NHÓM PHỤ TRÁCH',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.goldLabel,
+                          letterSpacing: 0.8,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         leader.fullName,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
                       ),
                       if (leader.phone != null && leader.phone!.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
                           leader.phone!,
-                          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                          style: const TextStyle(fontSize: 13, color: AppColors.warmTextMuted),
                         ),
                       ],
                     ],
@@ -199,10 +259,12 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
                     icon: const Icon(LucideIcons.phoneCall, size: 14),
                     label: const Text('Gọi / Lấy số'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.goldPrimary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      minimumSize: Size.zero,
+                      elevation: 2,
+                      shadowColor: AppColors.goldPrimary.withValues(alpha: 0.3),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
@@ -214,11 +276,18 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
           // 4. Checklist Đồ đạc & Thiết bị (chỉ hiển thị với các công việc có thiết bị như Lắp đặt / Thu hồi, ẩn ở Khảo sát)
           if (!isSurvey) ...[
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderLight),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 16,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,7 +297,7 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
                     children: [
                       const Text(
                         'Checklist Kiểm đồ & Thiết bị',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
                       ),
                       if (totalCount > 0)
                         Text(
@@ -236,12 +305,12 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: checkedCount == totalCount ? AppColors.completedText : AppColors.primary,
+                            color: checkedCount == totalCount ? const Color(0xFF16A34A) : AppColors.goldPrimary,
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
                   if (totalCount > 0) ...[
                     ClipRRect(
@@ -249,9 +318,9 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 6,
-                        backgroundColor: AppColors.borderLight,
+                        backgroundColor: const Color(0xFFFAF6F0),
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          checkedCount == totalCount ? AppColors.completedText : AppColors.primary,
+                          checkedCount == totalCount ? const Color(0xFF16A34A) : AppColors.goldPrimary,
                         ),
                       ),
                     ),
@@ -263,12 +332,12 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.warmInputBg,
+                        borderRadius: BorderRadius.circular(16),
                       ),
                       child: const Text(
                         'Chưa có thông tin danh sách thiết bị cho công việc này.',
-                        style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                        style: TextStyle(fontSize: 13, color: AppColors.warmTextMuted),
                       ),
                     )
                   else
@@ -277,10 +346,10 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
-                          color: isChecked ? AppColors.completedBg.withValues(alpha: 0.5) : AppColors.background,
-                          borderRadius: BorderRadius.circular(12),
+                          color: isChecked ? const Color(0xFFF0FDF4) : const Color(0xFFFAF6F0),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isChecked ? AppColors.completedText.withValues(alpha: 0.3) : AppColors.borderLight,
+                            color: isChecked ? const Color(0xFF86EFAC) : const Color(0xFFEFE8DC),
                           ),
                         ),
                         child: CheckboxListTile(
@@ -294,27 +363,27 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
                               }
                             });
                           },
-                          activeColor: AppColors.completedText,
+                          activeColor: const Color(0xFF16A34A),
                           title: Text(
                             item.name,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: isChecked ? AppColors.completedText : AppColors.textPrimary,
+                              color: isChecked ? const Color(0xFF15803D) : AppColors.warmTextDark,
                               decoration: isChecked ? TextDecoration.lineThrough : null,
                             ),
                           ),
                           subtitle: Text(
                             'Số lượng: ${item.quantity} ${item.unit}${item.source != null ? ' · Nguồn: ${item.source}' : ''}',
-                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                            style: const TextStyle(fontSize: 12, color: AppColors.warmTextMuted),
                           ),
                           secondary: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
-                              borderRadius: BorderRadius.circular(8),
+                              color: const Color(0xFFF7F2EA),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(LucideIcons.package, size: 18, color: AppColors.primary),
+                            child: const Icon(LucideIcons.package, size: 18, color: AppColors.goldPrimary),
                           ),
                         ),
                       );
@@ -332,15 +401,38 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: AppColors.primary),
-        const SizedBox(width: 10),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFFFFF9EE),
+          ),
+          child: Icon(icon, size: 16, color: AppColors.goldPrimary),
+        ),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
-              const SizedBox(height: 1),
-              Text(value, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+              Text(
+                title.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  color: AppColors.warmTextMuted,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  color: AppColors.warmTextDark,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ),

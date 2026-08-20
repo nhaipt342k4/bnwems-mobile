@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
 
 class HandoverSection extends StatefulWidget {
@@ -36,14 +35,12 @@ class _HandoverSectionState extends State<HandoverSection> {
   void initState() {
     super.initState();
     _noteController = TextEditingController(text: widget.existingNotes ?? '');
-    // Nếu provider báo đã nộp HOẶC đã có ảnh từ server thì khoá ngay từ đầu
     _isSubmitted = widget.isAlreadySubmitted || widget.existingPhotoUrls.isNotEmpty;
   }
 
   @override
   void didUpdateWidget(covariant HandoverSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Khi parent rebuild và truyền isAlreadySubmitted = true hoặc có ảnh server thì khoá ngay
     if (!_isSubmitted && (widget.isAlreadySubmitted || widget.existingPhotoUrls.isNotEmpty)) {
       setState(() => _isSubmitted = true);
     }
@@ -56,13 +53,12 @@ class _HandoverSectionState extends State<HandoverSection> {
   }
 
   void _showImagePickerOptions() {
-    // Không cho thao tác khi đã nộp
     if (_isSubmitted) return;
 
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(20),
@@ -72,29 +68,29 @@ class _HandoverSectionState extends State<HandoverSection> {
           children: [
             const Text(
               'Tải ảnh biên bản bàn giao / chữ ký',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
             ),
             const SizedBox(height: 16),
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10)),
-                child: Icon(LucideIcons.camera, color: Colors.blue.shade800, size: 20),
+                decoration: const BoxDecoration(color: Color(0xFFF7F2EA), shape: BoxShape.circle),
+                child: const Icon(LucideIcons.camera, color: AppColors.goldPrimary, size: 20),
               ),
-              title: const Text('Chụp ảnh từ máy ảnh', style: TextStyle(fontWeight: FontWeight.w600)),
+              title: const Text('Chụp ảnh từ máy ảnh', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.warmTextDark)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickFromCamera();
               },
             ),
-            const Divider(height: 1),
+            const Divider(height: 1, color: Color(0xFFF0E8DC)),
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(10)),
-                child: Icon(LucideIcons.image, color: Colors.green.shade800, size: 20),
+                decoration: const BoxDecoration(color: Color(0xFFF7F2EA), shape: BoxShape.circle),
+                child: const Icon(LucideIcons.image, color: AppColors.goldPrimary, size: 20),
               ),
-              title: const Text('Chọn nhiều ảnh từ thư viện', style: TextStyle(fontWeight: FontWeight.w600)),
+              title: const Text('Chọn nhiều ảnh từ thư viện', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.warmTextDark)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickFromGallery();
@@ -169,7 +165,7 @@ class _HandoverSectionState extends State<HandoverSection> {
           _isSubmitted = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã gửi biên bản bàn giao thành công!'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Đã gửi biên bản bàn giao thành công!'), backgroundColor: Color(0xFF16A34A)),
         );
       }
     } catch (e) {
@@ -190,32 +186,45 @@ class _HandoverSectionState extends State<HandoverSection> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _isSubmitted ? Colors.green.shade50 : AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        color: _isSubmitted ? const Color(0xFFF0FDF4) : Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            spreadRadius: 1,
+            offset: const Offset(0, 6),
+          ),
+        ],
         border: Border.all(
-          color: _isSubmitted ? Colors.green.shade300 : AppColors.borderLight,
+          color: _isSubmitted ? const Color(0xFF86EFAC) : const Color(0xFFF0E8DC),
           width: _isSubmitted ? 1.5 : 1.0,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ---------- Header ----------
+          // Header
           Row(
             children: [
-              Expanded(
-                child: const Text(
+              const Expanded(
+                child: Text(
                   'Biên bản bàn giao hiện trường',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.warmTextDark,
+                    fontFamily: 'serif',
+                  ),
                 ),
               ),
               if (_isSubmitted)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade600,
+                    color: const Color(0xFF16A34A),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Row(
@@ -232,30 +241,29 @@ class _HandoverSectionState extends State<HandoverSection> {
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // ---------- Banner khi đã nộp ----------
+          // Banner khi đã nộp
           if (_isSubmitted)
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 12),
+              margin: const EdgeInsets.only(bottom: 14),
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
               decoration: BoxDecoration(
-                color: Colors.green.shade100,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.green.shade300),
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  Icon(LucideIcons.shieldCheck, color: Colors.green.shade700, size: 18),
-                  const SizedBox(width: 8),
+                  Icon(LucideIcons.shieldCheck, color: Color(0xFF16A34A), size: 18),
+                  SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Biên bản đã được nộp thành công. Bạn không thể chỉnh sửa thêm.',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.green.shade800,
+                        color: Color(0xFF15803D),
                       ),
                     ),
                   ),
@@ -263,7 +271,7 @@ class _HandoverSectionState extends State<HandoverSection> {
               ),
             ),
 
-          // ---------- Note field (khoá nếu đã nộp) ----------
+          // Note field
           AppTextField(
             label: 'Nội dung bàn giao',
             hintText: 'Đã bàn giao toàn bộ hệ thống khung nhôm cho đại diện khách hàng...',
@@ -271,49 +279,57 @@ class _HandoverSectionState extends State<HandoverSection> {
             maxLines: 2,
             readOnly: _isSubmitted,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 'Ảnh biên bản bàn giao / chữ ký *',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
               ),
               if (_photoFiles.isNotEmpty)
                 Text(
                   'Đã chọn ${_photoFiles.length} ảnh',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.goldPrimary),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
-          // ---------- Ảnh: chỉ hiển thị danh sách khi đã nộp, không cho thêm/xoá ----------
+          // Ảnh upload box
           if (!_isSubmitted && _photoFiles.isEmpty && widget.existingPhotoUrls.isEmpty) ...[
             InkWell(
               onTap: _showImagePickerOptions,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(20),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade200),
+                  color: const Color(0xFFFFF9EE),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFF0DFBD)),
                 ),
                 child: Column(
                   children: [
-                    Icon(LucideIcons.camera, color: Colors.blue.shade700, size: 26),
-                    const SizedBox(height: 6),
-                    Text(
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFFF7F2EA),
+                      ),
+                      child: const Icon(LucideIcons.camera, color: AppColors.goldPrimary, size: 22),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
                       'Chụp ảnh hoặc chọn nhiều ảnh từ thư viện',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
                     ),
                     const SizedBox(height: 2),
                     const Text(
                       'Hỗ trợ tải lên biên bản bàn giao & chữ ký khách hàng',
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      style: TextStyle(fontSize: 11.5, color: AppColors.warmTextMuted),
                     ),
                   ],
                 ),
@@ -326,7 +342,6 @@ class _HandoverSectionState extends State<HandoverSection> {
                 scrollDirection: Axis.horizontal,
                 itemCount: widget.existingPhotoUrls.length + _photoFiles.length + (_isSubmitted ? 0 : 1),
                 itemBuilder: (ctx, index) {
-                  // Nút thêm ảnh (chỉ khi chưa nộp)
                   if (!_isSubmitted && index == widget.existingPhotoUrls.length + _photoFiles.length) {
                     return GestureDetector(
                       onTap: _showImagePickerOptions,
@@ -334,18 +349,18 @@ class _HandoverSectionState extends State<HandoverSection> {
                         width: 100,
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.blue.shade300),
+                          color: const Color(0xFFFFF9EE),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFF0DFBD)),
                         ),
-                        child: Column(
+                        child: const Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(LucideIcons.plus, color: Colors.blue.shade800, size: 24),
-                            const SizedBox(height: 4),
+                            Icon(LucideIcons.plus, color: AppColors.goldPrimary, size: 24),
+                            SizedBox(height: 4),
                             Text(
                               'Thêm ảnh',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
                             ),
                           ],
                         ),
@@ -363,13 +378,13 @@ class _HandoverSectionState extends State<HandoverSection> {
                         width: 110,
                         margin: const EdgeInsets.only(right: 10),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                           image: DecorationImage(
                             image: (isRemote ? NetworkImage(imageUrl!) : FileImage(file!)) as ImageProvider,
                             fit: BoxFit.cover,
                           ),
                           border: _isSubmitted
-                              ? Border.all(color: Colors.green.shade400, width: 2)
+                              ? Border.all(color: const Color(0xFF16A34A), width: 2)
                               : null,
                         ),
                       ),
@@ -395,8 +410,8 @@ class _HandoverSectionState extends State<HandoverSection> {
                           right: 14,
                           child: Container(
                             padding: const EdgeInsets.all(3),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade600,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF16A34A),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(LucideIcons.check, color: Colors.white, size: 12),
@@ -411,17 +426,36 @@ class _HandoverSectionState extends State<HandoverSection> {
 
           if (_error != null) ...[
             const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(fontSize: 12, color: AppColors.cancelledText)),
+            Text(_error!, style: const TextStyle(fontSize: 12, color: Colors.red)),
           ],
           const SizedBox(height: 16),
 
-          // ---------- Nút: ẩn hoàn toàn khi đã nộp ----------
           if (!_isSubmitted)
-            AppButton(
-              text: 'Gửi biên bản bàn giao',
-              isFullWidth: true,
-              isLoading: _isSubmitting,
-              onPressed: _handleSubmit,
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _handleSubmit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.goldPrimary,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shadowColor: AppColors.goldPrimary.withValues(alpha: 0.3),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text(
+                        'Gửi biên bản bàn giao',
+                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+                      ),
+              ),
             ),
         ],
       ),

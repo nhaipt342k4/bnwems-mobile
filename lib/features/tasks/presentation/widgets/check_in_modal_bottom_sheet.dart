@@ -4,7 +4,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_button.dart';
 
 class CheckInModalBottomSheet extends StatefulWidget {
   final String taskName;
@@ -148,14 +147,7 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
 
       if (permission == LocationPermission.deniedForever) {
         await Geolocator.openAppSettings();
-        if (mounted) {
-          setState(() {
-            _hasGpsPermission = false;
-            _gpsPermissionError = 'Quyền vị trí bị chặn vĩnh viễn. Vui lòng bật trong Cài đặt ứng dụng.';
-            _isCheckingGps = false;
-          });
-        }
-        return;
+        permission = await Geolocator.checkPermission();
       }
 
       if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
@@ -166,12 +158,12 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
             _isCheckingGps = false;
           });
         }
-        await _fetchCurrentPosition();
+        _fetchCurrentPosition();
       } else {
         if (mounted) {
           setState(() {
             _hasGpsPermission = false;
-            _gpsPermissionError = 'Quyền truy cập vị trí bị từ chối.';
+            _gpsPermissionError = 'Bạn đã từ chối cấp quyền GPS.';
             _isCheckingGps = false;
           });
         }
@@ -180,7 +172,7 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
       if (mounted) {
         setState(() {
           _hasGpsPermission = false;
-          _gpsPermissionError = 'Không thể yêu cầu quyền vị trí: $e';
+          _gpsPermissionError = 'Lỗi yêu cầu quyền GPS: $e';
           _isCheckingGps = false;
         });
       }
@@ -189,43 +181,61 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
 
   Future<void> _fetchCurrentPosition() async {
     try {
-      Position? position;
-      try {
-        position = await Geolocator.getCurrentPosition(
-          locationSettings: AndroidSettings(
-            accuracy: LocationAccuracy.high,
-            forceLocationManager: true,
-            timeLimit: const Duration(seconds: 10),
-          ),
-        );
-      } catch (_) {}
-
-      if (position == null) {
-        try {
-          position = await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.high,
-              timeLimit: Duration(seconds: 10),
-            ),
-          );
-        } catch (_) {}
-      }
-
-      position ??= await Geolocator.getLastKnownPosition();
-
-      if (mounted && position != null) {
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+      if (mounted) {
         setState(() {
-          _currentPosition = position;
+          _currentPosition = pos;
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _pickPhotoFromCamera() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+      if (image != null) {
+        setState(() {
+          _photoFile = File(image.path);
+          _submitError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _submitError = 'Không thể mở máy ảnh trên thiết bị này. Vui lòng chọn ảnh từ thư viện.';
+        });
+      }
+    }
+  }
+
+  Future<void> _pickPhotoFromGallery() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+      if (image != null) {
+        setState(() {
+          _photoFile = File(image.path);
+          _submitError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _submitError = 'Không thể mở thư viện ảnh: $e';
+        });
+      }
+    }
   }
 
   void _showImageSourcePickerModal() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(20),
@@ -234,33 +244,33 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Tải ảnh bằng chứng điểm danh',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              'Chọn nguồn ảnh chụp điểm danh',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2C241E)),
             ),
             const SizedBox(height: 16),
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10)),
-                child: Icon(LucideIcons.camera, color: Colors.blue.shade800, size: 20),
+                decoration: const BoxDecoration(color: Color(0xFFFAF6F0), shape: BoxShape.circle),
+                child: const Icon(LucideIcons.camera, color: AppColors.goldPrimary, size: 20),
               ),
-              title: const Text('Chụp ảnh từ máy ảnh', style: TextStyle(fontWeight: FontWeight.w600)),
+              title: const Text('Chụp ảnh trực tiếp từ camera', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2C241E))),
               onTap: () {
                 Navigator.pop(ctx);
-                _pickImage(ImageSource.camera);
+                _pickPhotoFromCamera();
               },
             ),
-            const Divider(height: 1),
+            const Divider(height: 1, color: Color(0xFFEFE8DC)),
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(10)),
-                child: Icon(LucideIcons.image, color: Colors.green.shade800, size: 20),
+                decoration: const BoxDecoration(color: Color(0xFFFAF6F0), shape: BoxShape.circle),
+                child: const Icon(LucideIcons.image, color: AppColors.goldPrimary, size: 20),
               ),
-              title: const Text('Chọn ảnh từ thư viện', style: TextStyle(fontWeight: FontWeight.w600)),
+              title: const Text('Chọn ảnh sẵn từ thư viện', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2C241E))),
               onTap: () {
                 Navigator.pop(ctx);
-                _pickImage(ImageSource.gallery);
+                _pickPhotoFromGallery();
               },
             ),
           ],
@@ -269,31 +279,10 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
     );
   }
 
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: source,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 85,
-      );
-      if (image != null) {
-        setState(() {
-          _photoFile = File(image.path);
-          _submitError = null;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _submitError = 'Không thể chụp/chọn ảnh: $e';
-      });
-    }
-  }
-
   Future<void> _handleSubmit() async {
     if (_photoFile == null) {
       setState(() {
-        _submitError = 'Vui lòng chụp ảnh bằng chứng điểm danh trực tiếp từ máy ảnh.';
+        _submitError = 'Vui lòng chụp hoặc tải ảnh bằng chứng hiện trường trước khi Check-in.';
       });
       return;
     }
@@ -331,77 +320,117 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       padding: EdgeInsets.only(
-        top: 20,
+        top: 24,
         left: 20,
         right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Row: Title & Close Button
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 'Điểm danh hiện trường',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: Color(0xFF2C241E),
+                  fontFamily: 'serif',
                 ),
               ),
-              IconButton(
-                icon: const Icon(LucideIcons.x, size: 20, color: AppColors.textMuted),
-                onPressed: () => Navigator.of(context).pop(),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFAF6F0),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(LucideIcons.x, size: 18, color: Color(0xFF2C241E)),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            widget.taskName,
-            style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-          ),
-          if (widget.locationName != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              'Địa điểm: ${widget.locationName}',
-              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-            ),
-          ],
           const SizedBox(height: 16),
 
-          // Chỉ hiển thị mục yêu cầu GPS khi ứng dụng chưa có quyền truy cập GPS hoặc GPS bị tắt
+          // Task & Location Summary Card (Vibrant Warm Gold Gradient)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFC59B63), Color(0xFFA87E46)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFC59B63).withValues(alpha: 0.22),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.taskName,
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                if (widget.locationName != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Địa điểm: ${widget.locationName}',
+                    style: const TextStyle(fontSize: 13, color: Color(0xFFF7EEDD)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // GPS Status Pill
           if (!_hasGpsPermission) ...[
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.cancelledBg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.cancelledText.withValues(alpha: 0.3)),
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.mapPinOff, size: 20, color: AppColors.cancelledText),
+                  const Icon(LucideIcons.mapPinOff, size: 20, color: Color(0xFFDC2626)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       _gpsPermissionError ?? 'Cần cấp quyền truy cập vị trí (GPS) để điểm danh.',
-                      style: const TextStyle(fontSize: 12, color: AppColors.cancelledText),
+                      style: const TextStyle(fontSize: 12.5, color: Color(0xFFDC2626)),
                     ),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: _isCheckingGps ? null : _requestGpsPermission,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.goldPrimary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       minimumSize: Size.zero,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: Text(
@@ -414,27 +443,25 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
             ),
             const SizedBox(height: 16),
           ] else ...[
-            // Đã có quyền vị trí: hiển thị badge nhỏ báo GPS sẵn sàng
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.completedBg,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.completedText.withValues(alpha: 0.2)),
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(LucideIcons.checkCircle2, size: 14, color: AppColors.completedText),
+                  const Icon(LucideIcons.checkCircle, size: 15, color: Color(0xFF16A34A)),
                   const SizedBox(width: 6),
                   Text(
                     _currentPosition != null
-                        ? 'Vị trí GPS sẵn sàng (${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)})'
+                        ? 'GPS sẵn sàng (${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)})'
                         : 'GPS sẵn sàng',
                     style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.completedText,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF16A34A),
                     ),
                   ),
                 ],
@@ -443,10 +470,10 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
             const SizedBox(height: 16),
           ],
 
-          // Section 2: Photo evidence capture
+          // Photo Evidence Upload Section
           const Text(
             'Ảnh bằng chứng điểm danh *',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF2C241E)),
           ),
           const SizedBox(height: 8),
 
@@ -454,7 +481,7 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(20),
                   child: Image.file(
                     _photoFile!,
                     height: 160,
@@ -468,7 +495,7 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
                   child: GestureDetector(
                     onTap: () => setState(() => _photoFile = null),
                     child: Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(6),
                       decoration: const BoxDecoration(
                         color: Colors.black54,
                         shape: BoxShape.circle,
@@ -484,24 +511,32 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
               onTap: _showImageSourcePickerModal,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade200),
+                  color: const Color(0xFFFFF9EE),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFF0DFBD)),
                 ),
                 child: Column(
                   children: [
-                    Icon(LucideIcons.camera, color: Colors.blue.shade700, size: 28),
-                    const SizedBox(height: 8),
-                    Text(
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFFFAF6F0),
+                      ),
+                      child: const Icon(LucideIcons.camera, color: AppColors.goldPrimary, size: 24),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
                       'Chụp ảnh hoặc chọn ảnh từ thư viện',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2C241E)),
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    const Text(
                       'Hỗ trợ tải ảnh chụp trực tiếp hoặc ảnh có sẵn từ máy',
-                      style: TextStyle(fontSize: 11, color: Colors.blue.shade700.withValues(alpha: 0.8)),
+                      style: TextStyle(fontSize: 12, color: AppColors.warmTextMuted),
                     ),
                   ],
                 ),
@@ -512,45 +547,61 @@ class _CheckInModalBottomSheetState extends State<CheckInModalBottomSheet> {
           if (_submitError != null) ...[
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               width: double.infinity,
               decoration: BoxDecoration(
-                color: AppColors.cancelledBg,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.cancelledText.withValues(alpha: 0.3)),
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.alertCircle, size: 16, color: AppColors.cancelledText),
+                  const Icon(LucideIcons.alertCircle, size: 16, color: Color(0xFFDC2626)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _submitError!,
-                      style: const TextStyle(fontSize: 12, color: AppColors.cancelledText, fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626), fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
               ),
             ),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
 
-          // Action buttons
+          // Action Buttons: Hủy (Outlined) & Xác nhận điểm danh (Solid Gold)
           Row(
             children: [
               Expanded(
-                child: AppButton(
-                  text: 'Hủy',
-                  variant: AppButtonVariant.outline,
-                  onPressed: () => Navigator.of(context).pop(),
+                child: SizedBox(
+                  height: 50,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFC59B63)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Hủy', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFC59B63), fontSize: 14.5)),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: AppButton(
-                  text: 'Xác nhận điểm danh',
-                  isLoading: _isSubmitting,
-                  onPressed: _handleSubmit,
+                child: SizedBox(
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.goldPrimary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: _isSubmitting ? null : _handleSubmit,
+                    child: _isSubmitting
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Xác nhận điểm danh', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold)),
+                  ),
                 ),
               ),
             ],
