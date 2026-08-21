@@ -1,3 +1,5 @@
+import 'quotation_item_model.dart';
+
 typedef SchedulePlanStatus = String; // 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 typedef WorkTaskCode = String; // 'SURVEY' | 'SETUP' | 'COLLECT'
 typedef PlanAssigneeRole = String; // 'LEAD' | 'TECHNICAL'
@@ -226,6 +228,7 @@ class SurveyReport {
   final String? proposedItems;
   final List<String> evidencePhotoUrls;
   final String? notes;
+  final List<QuotationItemInput> quotationItems;
 
   SurveyReport({
     required this.submittedAt,
@@ -237,12 +240,23 @@ class SurveyReport {
     this.proposedItems,
     this.evidencePhotoUrls = const [],
     this.notes,
+    this.quotationItems = const [],
   });
+
+  /// Tổng tiền báo giá
+  double get totalQuotationAmount => quotationItems.fold(0.0, (sum, item) => sum + item.totalAmount);
 
   /// Ảnh đầu tiên (giữ để tương thích code cũ chỉ hiển thị 1 ảnh).
   String get evidencePhotoUrl => evidencePhotoUrls.isEmpty ? '' : evidencePhotoUrls.first;
 
   factory SurveyReport.fromJson(Map<String, dynamic> json, {List<String> evidencePhotoUrls = const []}) {
+    List<QuotationItemInput> items = [];
+    if (json['quotationItems'] is List) {
+      items = (json['quotationItems'] as List)
+          .map((i) => QuotationItemInput.fromJson(i as Map<String, dynamic>))
+          .toList();
+    }
+
     return SurveyReport(
       submittedAt: json['createdAt']?.toString() ?? json['surveyDate']?.toString() ?? '',
       area: (json['area'] as num?)?.toDouble() ?? 0.0,
@@ -253,6 +267,7 @@ class SurveyReport {
       proposedItems: json['proposedItems']?.toString(),
       evidencePhotoUrls: evidencePhotoUrls,
       notes: json['notes']?.toString(),
+      quotationItems: items,
     );
   }
 }

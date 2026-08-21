@@ -467,6 +467,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                         proposedItems: input.proposedItems,
                         notes: input.notes,
                         evidenceIds: evidenceIds,
+                        quotationItems: input.quotationItems.map((item) => item.toJson()).toList(),
                       ),
                     );
                     taskProvider.markSurveySubmitted(plan.planId);

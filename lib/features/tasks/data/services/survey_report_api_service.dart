@@ -13,6 +13,7 @@ class CreateSurveyReportBody {
   final String? proposedItems;
   final String? notes;
   final List<String> evidenceIds;
+  final List<Map<String, dynamic>>? quotationItems;
 
   CreateSurveyReportBody({
     required this.orderId,
@@ -27,6 +28,7 @@ class CreateSurveyReportBody {
     this.proposedItems,
     this.notes,
     this.evidenceIds = const [],
+    this.quotationItems,
   });
 
   Map<String, dynamic> toJson() {
@@ -43,6 +45,7 @@ class CreateSurveyReportBody {
       if (proposedItems != null && proposedItems!.trim().isNotEmpty) 'proposedItems': proposedItems,
       if (notes != null && notes!.trim().isNotEmpty) 'notes': notes,
       if (evidenceIds.isNotEmpty) 'evidenceIds': evidenceIds,
+      if (quotationItems != null && quotationItems!.isNotEmpty) 'quotationItems': quotationItems,
     };
   }
 }
