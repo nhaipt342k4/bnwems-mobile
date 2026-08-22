@@ -356,11 +356,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
                               // Sub-brand Title
                               const Text(
-                                'WEDDING & EVENTS',
+                                'SỰ KIỆN CƯỚI HỎI',
                                 style: TextStyle(
-                                  fontSize: 11.5,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  letterSpacing: 4.0,
+                                  letterSpacing: 3.0,
                                   color: Color(0xFF70593E),
                                 ),
                               ),
@@ -368,10 +368,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
                               // Main App Title
                               const Text(
-                                'BNWEMS Staff',
+                                'Bình Nguyễn',
                                 style: TextStyle(
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.w400,
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.w600,
                                   color: Color(0xFF2C241E),
                                   fontFamily: 'serif',
                                 ),
