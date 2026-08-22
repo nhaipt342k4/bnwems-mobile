@@ -295,11 +295,15 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Checklist Kiểm đồ & Thiết bị',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+                      const Expanded(
+                        child: Text(
+                          'Checklist Kiểm đồ & Thiết bị',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      if (totalCount > 0)
+                      if (totalCount > 0) ...[
+                        const SizedBox(width: 8),
                         Text(
                           '$checkedCount/$totalCount đã kiểm',
                           style: TextStyle(
@@ -308,6 +312,7 @@ class _TechnicalTaskViewState extends State<TechnicalTaskView> {
                             color: checkedCount == totalCount ? const Color(0xFF16A34A) : AppColors.goldPrimary,
                           ),
                         ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 10),

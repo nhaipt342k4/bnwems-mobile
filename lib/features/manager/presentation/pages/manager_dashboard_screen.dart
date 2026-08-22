@@ -458,15 +458,6 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
                       ),
                       const Divider(height: 1, color: Color(0xFFF0E8DC), indent: 64),
                       _buildPendingRow(
-                        label: 'Yêu cầu đổi thiết bị',
-                        count: provider.pendingSummary.changeRequests.length,
-                        icon: LucideIcons.repeat,
-                        badgeBg: const Color(0xFFFEF3C7),
-                        iconColor: const Color(0xFFD97706),
-                        onTap: () => context.go('/manager/pending'),
-                      ),
-                      const Divider(height: 1, color: Color(0xFFF0E8DC), indent: 64),
-                      _buildPendingRow(
                         label: 'Báo cáo hoàn kho',
                         count: provider.pendingSummary.returnReports.length,
                         icon: LucideIcons.packageCheck,

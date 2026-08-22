@@ -79,4 +79,21 @@ class SurveyReportApiService {
   Future<Map<String, dynamic>> getById(String surveyId) async {
     return await _apiClient.fetchData<Map<String, dynamic>>('/survey-reports/$surveyId');
   }
+
+  // Nộp báo giá mới lên hệ thống cho khách hàng qua POST /api/v1/customers/:customerId/quotations
+  Future<Map<String, dynamic>> createCustomerQuotation({
+    required String customerId,
+    required List<Map<String, dynamic>> items,
+    String? notes,
+  }) async {
+    return await _apiClient.fetchData<Map<String, dynamic>>(
+      '/customers/$customerId/quotations',
+      method: 'POST',
+      body: {
+        'version': 'v1',
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+        'items': items,
+      },
+    );
+  }
 }

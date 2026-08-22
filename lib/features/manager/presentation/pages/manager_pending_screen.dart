@@ -60,7 +60,6 @@ class _ManagerPendingScreenState extends State<ManagerPendingScreen> {
     final returnCount = summary.returnReports.length;
     final depositCount = summary.deposits.length;
     final settlementCount = summary.settlements.length;
-    final changeRequestCount = summary.changeRequests.length;
     final surveyCount = summary.surveys.length;
     final totalCount = summary.totalCount;
 
@@ -160,7 +159,6 @@ class _ManagerPendingScreenState extends State<ManagerPendingScreen> {
                     _buildCategoryChip(provider, PendingCategory.returnReport, 'Thu hồi kho ($returnCount)'),
                     _buildCategoryChip(provider, PendingCategory.deposit, 'Đặt cọc ($depositCount)'),
                     _buildCategoryChip(provider, PendingCategory.settlement, 'Quyết toán ($settlementCount)'),
-                    _buildCategoryChip(provider, PendingCategory.changeRequest, 'Đổi thiết bị ($changeRequestCount)'),
                     _buildCategoryChip(provider, PendingCategory.survey, 'Khảo sát ($surveyCount)'),
                   ],
                 ),
@@ -200,7 +198,7 @@ class _ManagerPendingScreenState extends State<ManagerPendingScreen> {
                                       final statusText = Formatters.formatPaymentStatus(deposit.status);
                                       return _buildPendingCard(
                                         onTap: () => context.push('/manager/deposits/${deposit.orderId}'),
-                                        typeLabel: 'ĐẶT CỌC CHỜ XÁC NHẬN',
+                                        typeLabel: 'THU TIỀN CỌC',
                                         statusText: statusText,
                                         title: Formatters.formatOrderEvent(deposit.orderCode, deposit.eventName ?? deposit.customerName),
                                         subtitle: deposit.customerName ?? '',
@@ -222,22 +220,7 @@ class _ManagerPendingScreenState extends State<ManagerPendingScreen> {
                                       );
                                     }),
 
-                                  // 4. Change Requests (Đổi thiết bị)
-                                  if (provider.category == PendingCategory.all || provider.category == PendingCategory.changeRequest)
-                                    ...summary.changeRequests.map((req) {
-                                      final statusText = Formatters.formatChangeRequestStatus(req.status);
-                                      return _buildPendingCard(
-                                        onTap: () => context.push('/manager/change-requests'),
-                                        typeLabel: 'YÊU CẦU ĐỔI THIẾT BỊ',
-                                        statusText: statusText,
-                                        title: Formatters.formatOrderEvent(req.orderCode, req.eventName),
-                                        subtitle: '${req.customerName} · ${Formatters.formatChangeType(req.type)}',
-                                        amount: req.amount,
-                                        isSignedAmount: true,
-                                      );
-                                    }),
-
-                                  // 5. Surveys (Khảo sát)
+                                  // 4. Surveys (Khảo sát)
                                   if (provider.category == PendingCategory.all || provider.category == PendingCategory.survey)
                                     ...summary.surveys.map((s) {
                                       final busy = provider.busyId == s.surveyId;

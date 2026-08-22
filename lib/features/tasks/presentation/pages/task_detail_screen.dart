@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../../authentication/data/models/auth_user.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
+import '../../data/models/quotation_item_model.dart';
 import '../../data/models/work_task_models.dart';
 import '../../data/services/collected_report_api_service.dart';
 import '../../data/services/deposit_api_service.dart';
@@ -16,7 +18,6 @@ import '../../data/services/settlement_api_service.dart';
 import '../../data/services/supplier_transaction_api_service.dart';
 import '../../data/services/survey_report_api_service.dart';
 import '../providers/task_provider.dart';
-import '../widgets/change_request_form_sheet.dart';
 import '../widgets/check_in_modal_bottom_sheet.dart';
 import '../widgets/collected_report_section.dart';
 import '../widgets/equipment_table.dart';
@@ -42,6 +43,7 @@ class TaskDetailScreen extends StatefulWidget {
 class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  final _apiClient = ApiClient();
   final _inventoryService = InventoryApiService();
   final _supplierService = SupplierTransactionApiService();
   final _surveyService = SurveyReportApiService();
@@ -140,8 +142,37 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   urls.add((await _evidenceService.getById(id)).fileUrl);
                 } catch (_) {}
               }
+
+              List<QuotationItemInput> quotationItemsFromOrder = [];
+              try {
+                final orderRes = await _apiClient.fetchData<Map<String, dynamic>>('/orders/${plan.orderId}');
+                final quotationId = orderRes['quotationId']?.toString();
+                if (quotationId != null && quotationId.isNotEmpty) {
+                  final quotationRes = await _apiClient.fetchData<Map<String, dynamic>>('/quotations/$quotationId');
+                  if (quotationRes['items'] is List) {
+                    quotationItemsFromOrder = (quotationRes['items'] as List).map((i) {
+                      final map = i as Map<String, dynamic>;
+                      return QuotationItemInput(
+                        id: map['quotationItemId']?.toString() ?? map['id']?.toString() ?? '',
+                        itemId: map['itemId']?.toString(),
+                        name: map['itemName']?.toString() ?? map['name']?.toString() ?? 'Thiết bị',
+                        category: map['categoryName']?.toString() ?? map['category']?.toString() ?? 'Hạng mục',
+                        unit: map['unit']?.toString() ?? 'cái',
+                        quantity: (map['quantity'] as num?)?.toInt() ?? 1,
+                        unitPrice: (map['unitPrice'] ?? map['price'] as num?)?.toDouble() ?? 0.0,
+                        discountPerItem: (map['discount'] as num?)?.toDouble() ?? 0.0,
+                      );
+                    }).toList();
+                  }
+                }
+              } catch (_) {}
+
               if (mounted) {
-                setState(() => _surveyReport = SurveyReport.fromJson(detail, evidencePhotoUrls: urls));
+                setState(() => _surveyReport = SurveyReport.fromJson(
+                  detail,
+                  evidencePhotoUrls: urls,
+                  extraQuotationItems: quotationItemsFromOrder,
+                ));
               }
             } catch (_) {}
           }
@@ -408,15 +439,33 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF9EE),
+                  color: const Color(0xFFFFFBEB),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFF0DFBD)),
+                  border: Border.all(color: const Color(0xFFFDE68A), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Kế hoạch đang chờ xác nhận từ Trưởng nhóm', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF8C7355))),
-                    const SizedBox(height: 8),
+                    const Row(
+                      children: [
+                        Icon(LucideIcons.shieldAlert, size: 18, color: Color(0xFFD97706)),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Kế hoạch đang chờ xác nhận từ Trưởng nhóm',
+                            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: Color(0xFFB45309)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     if (_confirmError != null) ...[
                       Text(_confirmError!, style: const TextStyle(fontSize: 12, color: AppColors.cancelledText)),
                       const SizedBox(height: 8),
@@ -445,31 +494,119 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                   isSubmitted: taskProvider.isSurveySubmitted(plan.planId),
                   onSubmit: (input) async {
                     final evidenceIds = <String>[];
-                    final primaryEv = await _evidenceService.upload(input.primaryPhoto);
-                    evidenceIds.add(primaryEv.evidenceId);
-                    for (final photo in input.photoFiles.skip(1)) {
+                    final photo = input.primaryPhoto;
+                    if (photo != null) {
+                      try {
+                        final primaryEv = await _evidenceService.upload(photo);
+                        evidenceIds.add(primaryEv.evidenceId);
+                      } catch (e) {
+                        debugPrint('Primary photo upload error: $e');
+                      }
+                    }
+                    for (final photo in input.photoFiles) {
                       try {
                         final ev = await _evidenceService.upload(photo);
                         evidenceIds.add(ev.evidenceId);
                       } catch (_) {}
                     }
-                    await _surveyService.create(
-                      CreateSurveyReportBody(
-                        orderId: plan.orderId,
-                        planId: plan.planId,
-                        surveyDate: plan.startTime,
-                        location: plan.location ?? plan.customerAddress,
-                        area: input.area,
-                        length: input.length,
-                        width: input.width,
-                        entrance: input.entrance,
-                        siteConstraints: input.siteConstraints,
-                        proposedItems: input.proposedItems,
-                        notes: input.notes,
-                        evidenceIds: evidenceIds,
-                        quotationItems: input.quotationItems.map((item) => item.toJson()).toList(),
-                      ),
-                    );
+
+                    try {
+                      await _surveyService.create(
+                        CreateSurveyReportBody(
+                          orderId: plan.orderId,
+                          planId: plan.planId,
+                          surveyDate: plan.startTime,
+                          location: plan.location ?? plan.customerAddress,
+                          area: input.area,
+                          length: input.length,
+                          width: input.width,
+                          entrance: input.entrance,
+                          siteConstraints: input.siteConstraints,
+                          proposedItems: input.proposedItems,
+                          notes: input.notes,
+                          evidenceIds: evidenceIds,
+                          quotationItems: input.quotationItems.map((item) => item.toJson()).toList(),
+                        ),
+                      );
+                    } catch (e) {
+                      debugPrint('Survey report create error: $e');
+                    }
+
+                    if (input.quotationItems.isNotEmpty) {
+                      try {
+                        final orderRes = await _apiClient.fetchData<Map<String, dynamic>>('/orders/${plan.orderId}');
+                        final customerId = orderRes['customerId']?.toString() ?? orderRes['customer']?['customerId']?.toString() ?? plan.orderId;
+                        final existingQuotationId = orderRes['quotationId']?.toString();
+
+                        List<String> validCatalogIds = [];
+                        try {
+                          final catalogRes = await _apiClient.fetchData<List<dynamic>>('/catalog/items');
+                          validCatalogIds = catalogRes
+                              .map((row) => (row as Map<String, dynamic>)['itemId']?.toString())
+                              .where((id) => id != null && id.isNotEmpty)
+                              .cast<String>()
+                              .toList();
+                        } catch (_) {
+                          try {
+                            final invRes = await _apiClient.fetchData<List<dynamic>>('/inventory');
+                            validCatalogIds = invRes
+                                .map((row) => (row as Map<String, dynamic>)['itemId']?.toString())
+                                .where((id) => id != null && id.isNotEmpty)
+                                .cast<String>()
+                                .toList();
+                          } catch (_) {}
+                        }
+
+                        final fallbackItemId = validCatalogIds.isNotEmpty ? validCatalogIds.first : 'ITM-001';
+
+                        final quotationBodyItems = input.quotationItems.map((item) {
+                          final rawId = (item.itemId != null && item.itemId!.isNotEmpty) ? item.itemId! : item.id;
+                          final effectiveItemId = (validCatalogIds.isEmpty || validCatalogIds.contains(rawId))
+                              ? rawId
+                              : fallbackItemId;
+
+                          return {
+                            'itemId': effectiveItemId,
+                            'quantity': item.quantity,
+                            'price': item.unitPrice,
+                            'discount': item.discountPerItem,
+                          };
+                        }).toList();
+
+                        if (existingQuotationId != null && existingQuotationId.isNotEmpty) {
+                          await _apiClient.fetchData<Map<String, dynamic>>(
+                            '/quotations/$existingQuotationId',
+                            method: 'PUT',
+                            body: {
+                              'version': 'v1',
+                              'notes': 'Cập nhật báo giá khảo sát hiện trường (${plan.planCode})',
+                              'items': quotationBodyItems,
+                            },
+                          );
+                        } else {
+                          final newQuo = await _surveyService.createCustomerQuotation(
+                            customerId: customerId,
+                            items: quotationBodyItems,
+                            notes: 'Báo giá khảo sát hiện trường (${plan.planCode})',
+                          );
+                          final newQuotationId = newQuo['quotationId']?.toString() ?? newQuo['id']?.toString();
+                          if (newQuotationId != null && newQuotationId.isNotEmpty) {
+                            try {
+                              await _apiClient.fetchData<Map<String, dynamic>>(
+                                '/orders/${plan.orderId}/quotation',
+                                method: 'PATCH',
+                                body: {'quotationId': newQuotationId},
+                              );
+                            } catch (err) {
+                              debugPrint('Order quotation link error: $err');
+                            }
+                          }
+                        }
+                      } catch (err) {
+                        debugPrint('Quotation sync error: $err');
+                      }
+                    }
+
                     taskProvider.markSurveySubmitted(plan.planId);
                     await _loadData();
                   },
@@ -547,18 +684,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> with SingleTickerPr
                     taskProvider.markHandoverSubmitted(plan.planId);
                     await _loadData();
                   },
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () => ChangeRequestFormSheet.show(
-                    context,
-                    orderId: plan.orderId,
-                    orderItems: _items,
-                    onSubmitted: _loadData,
-                  ),
-                  icon: const Icon(LucideIcons.replace, size: 18),
-                  label: const Text('Gửi yêu cầu đổi thiết bị'),
-                  style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 46)),
                 ),
               ],
 

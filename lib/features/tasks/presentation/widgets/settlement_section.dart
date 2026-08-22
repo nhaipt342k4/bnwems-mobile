@@ -259,120 +259,28 @@ class _SettlementSectionState extends State<SettlementSection> {
     final isPaid = s != null && s.status == 'PAID';
     final absFinal = finalAmount.abs();
     final String settleLabel;
-    final Color settleBg;
-    final Color settleFg;
     if (finalAmount > 0) {
       settleLabel = 'Cần thu thêm của khách';
-      settleBg = const Color(0xFFFFF9EE);
-      settleFg = AppColors.goldLabel;
     } else if (finalAmount < 0) {
       settleLabel = 'Phải TRẢ LẠI cho khách';
-      settleBg = const Color(0xFFFFF7ED);
-      settleFg = const Color(0xFFC2410C);
     } else {
       settleLabel = 'Đã đủ, không thu thêm';
-      settleBg = const Color(0xFFF0FDF4);
-      settleFg = const Color(0xFF15803D);
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. Gold Luxury Header Card
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFF2C241E),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    widget.orderCode,
-                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.goldPrimary),
-                  ),
-                  if (s != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isPaid ? const Color(0xFF16A34A).withValues(alpha: 0.2) : AppColors.goldPrimary.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        Formatters.formatPaymentStatus(s.status),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: isPaid ? const Color(0xFF4ADE80) : AppColors.goldPrimary,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                widget.eventName ?? widget.customerName,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white,
-                  fontFamily: 'serif',
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${widget.customerName}${widget.eventDate != null ? " · ${Formatters.formatDate(widget.eventDate!)}" : ""}',
-                style: const TextStyle(fontSize: 12.5, color: Color(0xFFA89A8B)),
-              ),
-              if (widget.orderTotalAmount > 0) ...[
-                const SizedBox(height: 14),
-                const Divider(color: Colors.white12, height: 1),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Tổng giá trị đơn', style: TextStyle(fontSize: 12.5, color: Color(0xFFA89A8B))),
-                    Text(Formatters.formatCurrency(widget.orderTotalAmount), style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: Colors.white)),
-                  ],
-                ),
-                if (widget.depositCollected > 0) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Đã thu cọc', style: TextStyle(fontSize: 12.5, color: Color(0xFFA89A8B))),
-                      Text(Formatters.formatCurrency(widget.depositCollected), style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF4ADE80))),
-                    ],
-                  ),
-                ],
-              ],
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
         // 2. Settlement Form Card
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 16,
+                blurRadius: 18,
                 spreadRadius: 1,
                 offset: const Offset(0, 6),
               ),
@@ -387,43 +295,48 @@ class _SettlementSectionState extends State<SettlementSection> {
                   Row(
                     children: [
                       Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(color: AppColors.goldPrimary, shape: BoxShape.circle),
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(LucideIcons.fileCheck2, color: Color(0xFF2563EB), size: 16),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       const Text(
                         'Hồ sơ quyết toán cuối kỳ',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+                        style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                       ),
                     ],
                   ),
                   if (s != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isPaid ? const Color(0xFFDCFCE7) : const Color(0xFFFFF9EE),
-                        borderRadius: BorderRadius.circular(16),
+                        color: isPaid ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: isPaid ? const Color(0xFF86EFAC) : const Color(0xFFFDE68A)),
                       ),
                       child: Text(
                         Formatters.formatPaymentStatus(s.status),
                         style: TextStyle(
-                          fontSize: 10.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: isPaid ? const Color(0xFF16A34A) : AppColors.goldLabel,
+                          color: isPaid ? const Color(0xFF15803D) : const Color(0xFFB45309),
                         ),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
 
               if (isPaid) ...[
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF7F2EA),
+                    color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: Column(
                     children: [
@@ -432,14 +345,14 @@ class _SettlementSectionState extends State<SettlementSection> {
                       _buildAmountRow('Phụ phí phát sinh', s.additionalFee),
                       _buildAmountRow('Tiền bồi thường hỏng/mất', s.compensation),
                       _buildAmountRow('Giảm giá / Chiết khấu', s.discount, isNegative: true),
-                      const Divider(height: 16, color: Color(0xFFEAD8B7)),
+                      const Divider(height: 20, color: Color(0xFFE2E8F0)),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
                             child: Text(
                               s.finalAmount < 0 ? 'ĐÃ TRẢ LẠI KHÁCH:' : 'TỔNG THANH TOÁN:',
-                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -447,7 +360,7 @@ class _SettlementSectionState extends State<SettlementSection> {
                             fit: BoxFit.scaleDown,
                             child: Text(
                               Formatters.formatCurrency(s.finalAmount.abs()),
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: s.finalAmount < 0 ? const Color(0xFFC2410C) : AppColors.goldPrimary),
+                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: s.finalAmount < 0 ? const Color(0xFFC2410C) : const Color(0xFF16A34A)),
                             ),
                           ),
                         ],
@@ -461,12 +374,13 @@ class _SettlementSectionState extends State<SettlementSection> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFDCFCE7),
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF86EFAC)),
                   ),
                   child: const Row(
                     children: [
                       Icon(LucideIcons.checkCircle2, color: Color(0xFF16A34A), size: 18),
                       SizedBox(width: 8),
-                      Text('ĐÃ THANH TOÁN QUYẾT TOÁN', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
+                      Text('ĐÃ THANH TOÁN QUYẾT TOÁN', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
                     ],
                   ),
                 ),
@@ -489,12 +403,34 @@ class _SettlementSectionState extends State<SettlementSection> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Top Final Amount Highlight Banner
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: settleBg,
+                          gradient: LinearGradient(
+                            colors: absFinal < 0
+                                ? [const Color(0xFFFFF7ED), const Color(0xFFFFEDD5)]
+                                : absFinal == 0
+                                    ? [const Color(0xFFF0FDF4), const Color(0xFFDCFCE7)]
+                                    : [const Color(0xFFFEF3C7), const Color(0xFFFDE68A)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: settleFg.withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: absFinal < 0
+                                ? const Color(0xFFFDBA74)
+                                : absFinal == 0
+                                    ? const Color(0xFFA7F3D0)
+                                    : const Color(0xFFF59E0B),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (absFinal == 0 ? const Color(0xFF16A34A) : const Color(0xFFD97706)).withValues(alpha: 0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -505,28 +441,36 @@ class _SettlementSectionState extends State<SettlementSection> {
                                 children: [
                                   const Text(
                                     'SỐ TIỀN QUYẾT TOÁN CUỐI',
-                                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.warmTextMuted, letterSpacing: 0.5),
+                                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF475569), letterSpacing: 0.5),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     Formatters.formatCurrency(absFinal),
-                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: settleFg),
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      color: absFinal < 0 ? const Color(0xFFC2410C) : (absFinal == 0 ? const Color(0xFF15803D) : const Color(0xFF9A3412)),
+                                    ),
                                   ),
                                   Text(
                                     settleLabel,
-                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: settleFg),
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: absFinal < 0 ? const Color(0xFFC2410C) : (absFinal == 0 ? const Color(0xFF15803D) : const Color(0xFFB45309)),
+                                    ),
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 10),
                                   const Text(
                                     'NGÀY XÁC NHẬN',
-                                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.warmTextMuted, letterSpacing: 0.5),
+                                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 0.5),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 2),
                                   Text(
                                     s?.paidAt != null && s!.paidAt!.isNotEmpty
                                         ? Formatters.formatDate(s.paidAt!)
                                         : '—',
-                                    style: const TextStyle(fontSize: 13, color: AppColors.warmTextDark, fontWeight: FontWeight.w600),
+                                    style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A), fontWeight: FontWeight.w700),
                                   ),
                                 ],
                               ),
@@ -537,12 +481,33 @@ class _SettlementSectionState extends State<SettlementSection> {
                                 children: [
                                   const Text(
                                     'PHƯƠNG THỨC',
-                                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.warmTextMuted, letterSpacing: 0.5),
+                                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF475569), letterSpacing: 0.5),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    _paymentMethod == 'cash' ? 'Tiền mặt' : 'Chuyển khoản Ngân hàng',
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.8),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          _paymentMethod == 'cash' ? LucideIcons.banknote : LucideIcons.building2,
+                                          size: 14,
+                                          color: const Color(0xFF2563EB),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Flexible(
+                                          child: Text(
+                                            _paymentMethod == 'cash' ? 'Tiền mặt' : 'Chuyển khoản',
+                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -551,35 +516,44 @@ class _SettlementSectionState extends State<SettlementSection> {
                         ),
                       ),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
 
-                      const Text('Phụ thu phát sinh (VNĐ)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+                      // Input 1: Additional Fee
+                      const Text('Phụ thu phát sinh (VNĐ)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _additionalFeeController,
                         keyboardType: TextInputType.number,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                         decoration: InputDecoration(
+                          prefixIcon: const Icon(LucideIcons.plusCircle, size: 18, color: Color(0xFF2563EB)),
+                          suffixText: 'VNĐ',
+                          suffixStyle: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           filled: true,
-                          fillColor: const Color(0xFFF7F2EA),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          fillColor: const Color(0xFFF8FAFC),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
                         ),
                       ),
                       const SizedBox(height: 12),
+
+                      // Input 2: Compensation
                       Row(
                         children: [
-                          const Text('Bồi thường hư hỏng/mất (VNĐ)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+                          const Text('Bồi thường hư hỏng/mất (VNĐ)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                           if (widget.suggestedCompensation > 0 && widget.existingSettlement == null) ...[
                             const SizedBox(width: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFFF9EE),
+                                color: const Color(0xFFFFFBEB),
                                 borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFDE68A)),
                               ),
                               child: const Text(
                                 'Đề xuất',
-                                style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: AppColors.goldLabel),
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
                               ),
                             ),
                           ],
@@ -589,58 +563,79 @@ class _SettlementSectionState extends State<SettlementSection> {
                       TextField(
                         controller: _compensationController,
                         keyboardType: TextInputType.number,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                         decoration: InputDecoration(
+                          prefixIcon: const Icon(LucideIcons.alertTriangle, size: 18, color: Color(0xFFD97706)),
+                          suffixText: 'VNĐ',
+                          suffixStyle: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           filled: true,
-                          fillColor: const Color(0xFFF7F2EA),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          fillColor: const Color(0xFFF8FAFC),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFD97706), width: 1.5)),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text('Giảm trừ / Chiết khấu (VNĐ)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+
+                      // Input 3: Discount
+                      const Text('Giảm trừ / Chiết khấu (VNĐ)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _discountController,
                         keyboardType: TextInputType.number,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                         decoration: InputDecoration(
+                          prefixIcon: const Icon(LucideIcons.percent, size: 18, color: Color(0xFF059669)),
+                          suffixText: 'VNĐ',
+                          suffixStyle: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           filled: true,
-                          fillColor: const Color(0xFFF7F2EA),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          fillColor: const Color(0xFFF8FAFC),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5)),
                         ),
                       ),
 
                       const SizedBox(height: 12),
 
-                      const Text('Phương thức thanh toán', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+                      // Payment Method Dropdown
+                      const Text('Phương thức thanh toán', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
                         value: _paymentMethod,
+                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                         decoration: InputDecoration(
+                          prefixIcon: const Icon(LucideIcons.creditCard, size: 18, color: Color(0xFF4F46E5)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           filled: true,
-                          fillColor: const Color(0xFFF7F2EA),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          fillColor: const Color(0xFFF8FAFC),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 1.5)),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'bank_transfer', child: Text('Chuyển khoản Ngân hàng', style: TextStyle(color: AppColors.warmTextDark))),
-                          DropdownMenuItem(value: 'cash', child: Text('Tiền mặt', style: TextStyle(color: AppColors.warmTextDark))),
+                          DropdownMenuItem(value: 'bank_transfer', child: Text('Chuyển khoản Ngân hàng')),
+                          DropdownMenuItem(value: 'cash', child: Text('Tiền mặt')),
                         ],
                         onChanged: (val) => setState(() => _paymentMethod = val ?? 'bank_transfer'),
                       ),
 
                       const SizedBox(height: 12),
 
-                      const Text('Ghi chú quyết toán', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+                      // Notes Input
+                      const Text('Ghi chú quyết toán', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _notesController,
                         maxLines: 2,
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
                         decoration: InputDecoration(
+                          hintText: 'Nhập ghi chú hoặc lý do phụ thu/chiết khấu...',
+                          hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           filled: true,
-                          fillColor: const Color(0xFFF7F2EA),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          fillColor: const Color(0xFFF8FAFC),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
                         ),
                       ),
 
@@ -648,7 +643,7 @@ class _SettlementSectionState extends State<SettlementSection> {
 
                       Text(
                         _paymentMethod == 'bank_transfer' ? 'Ảnh bằng chứng chuyển khoản (tùy chọn)' : 'Ảnh hóa đơn/chứng từ (tùy chọn)',
-                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                       ),
                       const SizedBox(height: 8),
                       if (_photoFile != null) ...[
@@ -681,9 +676,10 @@ class _SettlementSectionState extends State<SettlementSection> {
                             icon: const Icon(LucideIcons.camera, size: 18),
                             label: const Text('Chụp ảnh hoặc chọn từ thư viện'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.goldPrimary,
-                              side: const BorderSide(color: Color(0xFFF0E8DC)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              foregroundColor: const Color(0xFF2563EB),
+                              side: const BorderSide(color: Color(0xFFBFDBFE)),
+                              backgroundColor: const Color(0xFFEFF6FF),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
                           ),
                         ),
@@ -703,11 +699,11 @@ class _SettlementSectionState extends State<SettlementSection> {
                               child: ElevatedButton(
                                 onPressed: _isSubmitting ? null : _handleCreateOrUpdateSettlement,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.goldPrimary,
+                                  backgroundColor: const Color(0xFFD97706),
                                   foregroundColor: Colors.white,
-                                  elevation: 2,
-                                  shadowColor: AppColors.goldPrimary.withValues(alpha: 0.3),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                  elevation: 3,
+                                  shadowColor: const Color(0xFFD97706).withValues(alpha: 0.35),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 ),
                                 child: _isSubmitting
                                     ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
@@ -728,10 +724,11 @@ class _SettlementSectionState extends State<SettlementSection> {
                               child: ElevatedButton(
                                 onPressed: _isMarkingPaid ? null : _handleMarkPaid,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2C241E),
+                                  backgroundColor: const Color(0xFF16A34A),
                                   foregroundColor: Colors.white,
-                                  elevation: 2,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                  elevation: 3,
+                                  shadowColor: const Color(0xFF16A34A).withValues(alpha: 0.35),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 ),
                                 child: _isMarkingPaid
                                     ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))

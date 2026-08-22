@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_text_field.dart';
@@ -44,6 +45,9 @@ class _EquipmentPickerSheetState extends State<EquipmentPickerSheet> {
   String _searchQuery = '';
   String _selectedCategory = 'Tất cả';
 
+  List<CatalogItemPreset> _catalogItems = defaultEquipmentCatalog;
+  bool _isLoadingCatalog = true;
+
   final categories = [
     'Tất cả',
     'Máy quay & Flycam',
@@ -53,6 +57,50 @@ class _EquipmentPickerSheetState extends State<EquipmentPickerSheet> {
     'Bàn chữ nhật',
     'Cổng hoa',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRealCatalog();
+  }
+
+  Future<void> _fetchRealCatalog() async {
+    try {
+      final apiClient = ApiClient();
+      final response = await apiClient.fetchData<dynamic>('/catalog/items');
+      List<dynamic> list = [];
+      if (response is Map<String, dynamic> && response['data'] is List) {
+        list = response['data'] as List<dynamic>;
+      } else if (response is List) {
+        list = response;
+      }
+
+      if (list.isNotEmpty) {
+        final fetchedPresets = list.map((row) {
+          final map = row as Map<String, dynamic>;
+          return CatalogItemPreset(
+            itemId: map['itemId']?.toString() ?? map['id']?.toString() ?? 'EQ-001',
+            name: map['itemName']?.toString() ?? map['name']?.toString() ?? 'Thiết bị',
+            category: map['categoryName']?.toString() ?? map['category']?.toString() ?? 'Khác',
+            unit: map['unit']?.toString() ?? 'Cái',
+            defaultPrice: (map['rentalPrice'] ?? map['price'] ?? map['unitPrice'] as num?)?.toDouble() ?? 0.0,
+          );
+        }).toList();
+
+        if (mounted) {
+          setState(() {
+            _catalogItems = fetchedPresets;
+            _isLoadingCatalog = false;
+          });
+        }
+        return;
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() => _isLoadingCatalog = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -154,7 +202,7 @@ class _EquipmentPickerSheetState extends State<EquipmentPickerSheet> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    final filteredList = defaultEquipmentCatalog.where((item) {
+    final filteredList = _catalogItems.where((item) {
       final matchesCat = _selectedCategory == 'Tất cả' || item.category == _selectedCategory;
       final matchesSearch = _searchQuery.isEmpty || item.name.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesCat && matchesSearch;

@@ -29,9 +29,11 @@ class SupplierTransactionSection extends StatelessWidget {
           children: [
             Icon(LucideIcons.truck, size: 18, color: Color(0xFF7E22CE)),
             SizedBox(width: 8),
-            Text(
-              'Nhận thiết bị từ Nhà cung cấp (Đơn thuê/mua)',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+            Expanded(
+              child: Text(
+                'Nhận thiết bị từ Nhà cung cấp (Đơn thuê/mua)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+              ),
             ),
           ],
         ),
@@ -56,14 +58,30 @@ class SupplierTransactionSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(tx.supplierName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
-                    Text(tx.transactionCode, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.warmTextMuted)),
+                    Expanded(
+                      child: Text(
+                        tx.supplierName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.warmTextDark),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      tx.transactionCode,
+                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.warmTextMuted),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(tx.serviceTitle, style: const TextStyle(fontSize: 13, color: AppColors.goldPrimary, fontWeight: FontWeight.bold)),
+                Text(
+                  tx.serviceTitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: AppColors.goldPrimary, fontWeight: FontWeight.bold),
+                ),
                 Text('Chi phí dự kiến: ${Formatters.formatCurrency(tx.estimatedCost)}', style: const TextStyle(fontSize: 12, color: AppColors.warmTextMuted)),
                 const SizedBox(height: 8),
                 _statusBadge(tx.status),

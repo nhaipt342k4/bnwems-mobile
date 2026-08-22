@@ -510,28 +510,51 @@ class _CollectedEquipmentReportSectionState extends State<CollectedEquipmentRepo
   }
 
   Widget _counter(String label, int value, ValueChanged<int> onChanged) {
+    Color bg = const Color(0xFFF8FAFC);
+    Color border = const Color(0xFFE2E8F0);
+    Color textCol = const Color(0xFF334155);
+    Color iconCol = const Color(0xFF2563EB);
+
+    if (label == 'Tốt') {
+      bg = const Color(0xFFF0FDF4);
+      border = const Color(0xFFBBF7D0);
+      textCol = const Color(0xFF15803D);
+      iconCol = const Color(0xFF16A34A);
+    } else if (label == 'Hỏng') {
+      bg = const Color(0xFFFFFBEB);
+      border = const Color(0xFFFDE68A);
+      textCol = const Color(0xFFB45309);
+      iconCol = const Color(0xFFD97706);
+    } else if (label == 'Mất') {
+      bg = const Color(0xFFFFF1F2);
+      border = const Color(0xFFFECDD3);
+      textCol = const Color(0xFFBE123C);
+      iconCol = const Color(0xFFE11D48);
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F2EA),
+        color: bg,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.warmTextMuted)),
-          const SizedBox(width: 6),
+          Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: textCol)),
+          const SizedBox(width: 8),
           InkWell(
             onTap: value > 0 ? () => onChanged(value - 1) : null,
-            child: const Icon(LucideIcons.minusCircle, size: 16, color: AppColors.goldPrimary),
+            child: Icon(LucideIcons.minusCircle, size: 16, color: value > 0 ? iconCol : const Color(0xFFCBD5E1)),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Text('$value', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.warmTextDark)),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text('$value', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: textCol)),
           ),
           InkWell(
             onTap: () => onChanged(value + 1),
-            child: const Icon(LucideIcons.plusCircle, size: 16, color: AppColors.goldPrimary),
+            child: Icon(LucideIcons.plusCircle, size: 16, color: iconCol),
           ),
         ],
       ),

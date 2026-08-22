@@ -268,13 +268,15 @@ class _EquipmentTableState extends State<EquipmentTable> {
                   children: [
                     Container(width: 3.5, height: 16, color: const Color(0xFF7E22CE)),
                     const SizedBox(width: 8),
-                    const Text(
-                      'Nhà cung cấp (theo đơn thuê)',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.warmTextDark,
-                        fontFamily: 'serif',
+                    const Expanded(
+                      child: Text(
+                        'Nhà cung cấp (theo đơn thuê)',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.warmTextDark,
+                          fontFamily: 'serif',
+                        ),
                       ),
                     ),
                   ],

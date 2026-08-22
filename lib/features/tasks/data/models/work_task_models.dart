@@ -249,12 +249,18 @@ class SurveyReport {
   /// Ảnh đầu tiên (giữ để tương thích code cũ chỉ hiển thị 1 ảnh).
   String get evidencePhotoUrl => evidencePhotoUrls.isEmpty ? '' : evidencePhotoUrls.first;
 
-  factory SurveyReport.fromJson(Map<String, dynamic> json, {List<String> evidencePhotoUrls = const []}) {
+  factory SurveyReport.fromJson(
+    Map<String, dynamic> json, {
+    List<String> evidencePhotoUrls = const [],
+    List<QuotationItemInput>? extraQuotationItems,
+  }) {
     List<QuotationItemInput> items = [];
-    if (json['quotationItems'] is List) {
+    if (json['quotationItems'] is List && (json['quotationItems'] as List).isNotEmpty) {
       items = (json['quotationItems'] as List)
           .map((i) => QuotationItemInput.fromJson(i as Map<String, dynamic>))
           .toList();
+    } else if (extraQuotationItems != null && extraQuotationItems.isNotEmpty) {
+      items = extraQuotationItems;
     }
 
     return SurveyReport(

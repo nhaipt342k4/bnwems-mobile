@@ -321,13 +321,7 @@ class _ManagerPlanDetailScreenState extends State<ManagerPlanDetailScreen> {
       if (_items.isNotEmpty) EquipmentTable(items: _items) else _emptyHint('Chưa có dữ liệu thiết bị.'),
       if (_supplierTxs.isNotEmpty) ...[
         const SizedBox(height: 20),
-        _sectionTitle(LucideIcons.truck, 'Thiết bị thuê nhà cung cấp'),
         SupplierTransactionSection(transactions: _supplierTxs, onReceiveItem: (_, _, _) async {}, readOnly: true),
-      ],
-      if (_changeRequests.isNotEmpty) ...[
-        const SizedBox(height: 20),
-        _sectionTitle(LucideIcons.repeat, 'Yêu cầu đổi thiết bị'),
-        ..._changeRequests.map(_changeCard),
       ],
       const SizedBox(height: 20),
       _sectionTitle(LucideIcons.fileCheck2, 'Biên bản bàn giao'),
